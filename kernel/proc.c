@@ -692,3 +692,16 @@ procdump(void)
     printf("\n");
   }
 }
+
+// 统计不属于 UNUSED 状态的进程数量
+void
+proccount(uint64* count)
+{
+  *count = 0;
+  struct proc* p;
+  for(p = proc; p < &proc[NPROC]; ++p){
+    if(p->state != UNUSED){
+      (*count)++;
+    }
+  }
+}

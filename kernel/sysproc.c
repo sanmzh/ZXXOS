@@ -7,6 +7,8 @@
 #include "proc.h"
 #include "vm.h"
 
+#include "sysinfo.h"
+
 uint64
 sys_exit(void)
 {
@@ -117,5 +119,24 @@ sys_trace(void)
   argint(0, &mask);               // 通过读取进程的trapframe，获得 mask 参数    
 
   myproc()->trace_mask = mask;    // 将 mask 参数保存到当前进程的 trace_mask 字段中
+  return 0;
+}
+
+// 获取系统信息
+uint64
+sys_sysinfo(void)
+{
+  struct sysinfo info;
+  freebytes(&info.freemem);
+  proccount(&info.nproc);
+
+  // 获取虚拟地址
+  uint64 dstva;
+  argaddr(0, &dstva);
+
+  // 将 info 结构体从内核空间复制到用户空间
+  if(copyout(myproc()->pagetable, dstva, (char *)&info, sizeof(info)) < 0)
+    return -1;
+
   return 0;
 }
