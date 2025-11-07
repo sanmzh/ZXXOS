@@ -6,6 +6,19 @@
 
 volatile static int started = 0;
 
+void
+printlogo()
+{
+  printf("\n");
+  printf("███████╗ ██╗  ██╗ ██╗  ██╗  ██████╗  ███████╗\n");
+  printf("╚══███╔╝ ╚██╗██╔╝ ╚██╗██╔╝ ██╔═══██╗ ██╔════╝\n");
+  printf("  ███╔╝   ╚███╔╝   ╚███╔╝  ██║   ██║ ███████╗\n");
+  printf(" ███╔╝    ██╔██╗   ██╔██╗  ██║   ██║ ╚════██║\n");
+  printf("███████╗ ██╔╝ ██╗ ██╔╝ ██╗ ╚██████╔╝ ███████║\n");
+  printf("╚══════╝ ╚═╝  ╚═╝ ╚═╝  ╚═╝  ╚═════╝  ╚══════╝\n");
+  printf("\n");
+}
+
 // start() jumps here in supervisor mode on all CPUs.
 void
 main()
@@ -13,8 +26,9 @@ main()
   if(cpuid() == 0){
     consoleinit();
     printfinit();
+    printlogo();
     printf("\n");
-    printf("xv6 kernel is booting\n");
+    printf("ZXXOS kernel is booting\n");
     printf("\n");
     kinit();         // physical page allocator
     kvminit();       // create kernel page table
