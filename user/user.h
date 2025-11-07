@@ -1,6 +1,7 @@
 #define SBRK_ERROR ((char *)-1)
 
 struct stat;
+struct sysinfo; // in kernel/sysinfo.h
 
 // system calls
 int fork(void);
@@ -25,6 +26,7 @@ char* sys_sbrk(int,int);
 int pause(int);
 int uptime(void);
 int trace(int);         // 用户态程序可以找到trace系统调用的跳板入口函数
+int sysinfo(struct sysinfo *);
 
 // ulib.c
 int stat(const char*, struct stat*);
