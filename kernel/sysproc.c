@@ -107,3 +107,15 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+// 当前进程的系统调用跟踪掩码
+uint64
+sys_trace(void)
+{
+  int mask;
+
+  argint(0, &mask);               // 通过读取进程的trapframe，获得 mask 参数    
+
+  myproc()->trace_mask = mask;    // 将 mask 参数保存到当前进程的 trace_mask 字段中
+  return 0;
+}
