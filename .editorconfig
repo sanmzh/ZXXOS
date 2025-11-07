@@ -1,22 +1,22 @@
 ; https://editorconfig.org
 
-root = true
+root = true     # 顶级配置文件，阻止向上查找
 
-[*]
-end_of_line = lf
-insert_final_newline = true
-indent_style = space
-indent_size = 4
+[*]             # 所有文件的通用设置
+end_of_line = lf        # 行尾使用 Linux/macOS 风格的 LF 换行符
+insert_final_newline = true     # 文件末尾自动插入空行
+indent_style = space            # 使用空格缩进（默认）
+indent_size = 4                 # 缩进大小为 4 个空格（默认）
 
 [*.{c,h}]
-indent_size = 2
+indent_size = 2                 # C 源文件和头文件使用 2 空格缩进
 
 [*.S]
-indent_size = 8
+indent_size = 8                 # 汇编文件使用 8 空格缩进（汇编代码常见格式）
 
 [*.ld]
-indent_size = 2
+indent_size = 2                 # 链接器脚本使用 2 空格缩进
 
 [Makefile]
-indent_style = tab
-indent_size = 8
+indent_style = tab              # Makefile 必须使用制表符
+indent_size = 8                 # 制表符宽度显示为 8 个字符
