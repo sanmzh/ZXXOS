@@ -1,10 +1,69 @@
+该文档可能实时更改，请同步参阅。
+
 # 开发
 
 开发前请熟读 xv6-riscv-book ，有不确定的地方务必仔细配套原文参考代码，不轻易相信网络上的二手资料以及 AI 的回答。
 
-开发完成功能后，要求测试以及详细的开发文档（最好写成教程一样详细，详细描述开发过程中的每一处考量），之后才可提交 PR。
+开发完成功能后，要求测试以及详细的开发文档（最好写成教程一样详细，详细描述开发过程中的每一处考量），之后才可提交 PR。文档添加在 doc 目录下，暂时以日期加功能名称命名，如 '2023-03-01-xxx.md'。方便日后查阅以及整理归纳。
+
+git 提交前请 make clean ， 不要提交无关的中间文件，不利于他人阅读理解。
+
+# 格式化
+
+代码风格参照 xv6-riscv 内核代码风格。见下例。 返回值'void'换行，'if(){}' 之间无空格，' else {} ` 间空格。**首行缩进两个空格。** **函数命名无大写。** 更多细节实时参考源代码。
+```c
+void
+main()
+{
+  if(cpuid() == 0){
+    consoleinit();
+    printfinit();
+    printlogo();
+    printf("\n");
+    printf("ZXXOS kernel is booting\n");
+    printf("\n");
+    kinit();         // physical page allocator
+    kvminit();       // create kernel page table
+    kvminithart();   // turn on paging
+    procinit();      // process table
+    trapinit();      // trap vectors
+    trapinithart();  // install kernel trap vector
+    plicinit();      // set up interrupt controller
+    plicinithart();  // ask PLIC for device interrupts
+    binit();         // buffer cache
+    iinit();         // inode table
+    fileinit();      // file table
+    virtio_disk_init(); // emulated hard disk
+    userinit();      // first user process
+    __sync_synchronize();
+    started = 1;
+  } else {
+    while(started == 0)
+      ;
+    __sync_synchronize();
+    printf("hart %d starting\n", cpuid());
+    kvminithart();    // turn on paging
+    trapinithart();   // install kernel trap vector
+    plicinithart();   // ask PLIC for device interrupts
+  }
+
+  scheduler();        
+}
+```
 
 # 协作
+
+常见操作
+```bash
+git pull orgin master  # 拉取远程 master 分支最新代码
+
+git add . # 添加当前目录所有修改到暂存区
+git status # 查看当前更改状态
+git commit -m "doc: xxx" # 提交暂存区修改
+git push origin master # 推送本地修改到远程 master 分支
+```
+
+可以自己建立分支开发，开发完成后合并到主分支。
 
 AI 参考
 
@@ -178,6 +237,4 @@ Git 同步协作的核心在于：
 
 
 
-# 格式化
 
-代码风格参照 xv6-riscv 内核代码风格。
