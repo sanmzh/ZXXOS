@@ -8,6 +8,8 @@
 
 git 提交前请 make clean ， 不要提交无关的中间文件，不利于他人阅读理解。
 
+gdb 调试可参考  https://pdos.csail.mit.edu/6.828/2025/labs/syscall.html
+
 # 格式化
 
 代码风格参照 xv6-riscv 内核代码风格。见下例。 返回值'void'换行，'if(){}' 之间无空格，' else {} ` 间空格。**首行缩进两个空格。可使用VSCODE插件editorconfig规范缩进，见根目录的editorconfig。** **函数命名无大写。** 更多细节实时参考源代码。
