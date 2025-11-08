@@ -139,6 +139,8 @@ panic(char *s)
   panicking = 1;
   printf("panic: ");
   printf("%s\n", s);
+  // 打印调用栈轨迹
+  backtrace();
   panicked = 1; // freeze uart output from other CPUs
   for(;;)
     ;
@@ -148,4 +150,24 @@ void
 printfinit(void)
 {
   initlock(&pr.lock, "pr");
+}
+
+// 打印调用栈轨迹
+void
+backtrace(void)
+{
+  uint64 fp = r_fp();  // 获取当前帧指针
+  uint64 top = PGROUNDDOWN(fp);  // 当前栈页的起始地址
+  
+  printf("backtrace:\n");
+  
+  // 遍历栈帧链表
+  while(fp != 0 && PGROUNDDOWN(fp) == top) {
+    // 获取返回地址 (位于 fp-8 处)
+    uint64 ret = *(uint64*)(fp - 8);
+    printf("%p\n", (void*)ret);
+    
+    // 获取上一级帧指针 (位于 fp-16 处)
+    fp = *(uint64*)(fp - 16);
+  }
 }
