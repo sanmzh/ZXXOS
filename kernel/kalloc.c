@@ -23,10 +23,25 @@ struct {
   struct run *freelist;
 } kmem;
 
+// 引用计数数组
+struct {
+  struct spinlock lock;
+  int ref_count[(PHYSTOP - KERNBASE) / PGSIZE];
+} refcnt;
+
 void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
+  initlock(&refcnt.lock, "refcnt");
+  
+  // 初始化引用计数
+  acquire(&refcnt.lock);
+  for(int i = 0; i < (PHYSTOP - KERNBASE) / PGSIZE; i++) {
+    refcnt.ref_count[i] = 0;
+  }
+  release(&refcnt.lock);
+  
   freerange(end, (void*)PHYSTOP);
 }
 
@@ -50,6 +65,13 @@ kfree(void *pa)
 
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
     panic("kfree");
+
+  // 减少引用计数
+  dec_refcnt(pa);
+  
+  // 只有引用计数为0时才真正释放
+  if(get_refcnt(pa) > 0)
+    return;
 
   // Fill with junk to catch dangling refs.
   memset(pa, 1, PGSIZE);
@@ -76,9 +98,49 @@ kalloc(void)
     kmem.freelist = r->next;
   release(&kmem.lock);
 
-  if(r)
+  if(r) {
     memset((char*)r, 5, PGSIZE); // fill with junk
+    // 初始化引用计数为1
+    acquire(&refcnt.lock);
+    int idx = ((uint64)r - KERNBASE) / PGSIZE;
+    refcnt.ref_count[idx] = 1;
+    release(&refcnt.lock);
+  }
+  
+  // 确保页表页面的引用计数也被正确初始化
+  // 这对于COW实现很重要
   return (void*)r;
+}
+
+// 获取页面对应的引用计数
+int
+get_refcnt(void *pa)
+{
+  int idx = ((uint64)pa - KERNBASE) / PGSIZE;
+  acquire(&refcnt.lock);
+  int count = refcnt.ref_count[idx];
+  release(&refcnt.lock);
+  return count;
+}
+
+// 增加引用计数
+void
+inc_refcnt(void *pa)
+{
+  int idx = ((uint64)pa - KERNBASE) / PGSIZE;
+  acquire(&refcnt.lock);
+  refcnt.ref_count[idx]++;
+  release(&refcnt.lock);
+}
+
+// 减少引用计数
+void
+dec_refcnt(void *pa)
+{
+  int idx = ((uint64)pa - KERNBASE) / PGSIZE;
+  acquire(&refcnt.lock);
+  refcnt.ref_count[idx]--;
+  release(&refcnt.lock);
 }
 
 // 获取空闲内存

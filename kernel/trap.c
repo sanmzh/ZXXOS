@@ -68,15 +68,40 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
-  } else if((r_scause() == 15 || r_scause() == 13) &&
-            vmfault(p->pagetable, r_stval(), (r_scause() == 13)? 1 : 0) != 0) {
-    // page fault on lazily-allocated page
+  } else if(r_scause() == 15 || r_scause() == 13) {
+    // 处理写错误（可能是COW页面）或读错误（懒分配页面）
+    uint64 va = r_stval();
+    uint64 cause = r_scause();
+    
+    // 如果是写错误，尝试处理COW页面
+    if(cause == 15) {
+      pte_t *pte = walk(p->pagetable, va, 0);
+      if(pte && (*pte & PTE_V) && (*pte & PTE_COW)) {
+        if(cow_handler(p->pagetable, va) == 0) {
+          // COW处理成功
+          goto done;
+        } else {
+          // COW处理失败，可能是内存不足，杀死进程
+          setkilled(p);
+          goto done;
+        }
+      }
+    }
+    
+    // 如果不是COW页面或者COW处理失败，尝试懒分配
+    if(vmfault(p->pagetable, va, (cause == 13)? 1 : 0) != 0) {
+      // 懒分配也失败
+      printf("usertrap(): page fault at va=%p, pid=%d\n", (void*)va, p->pid);
+      printf("            sepc=0x%lx scause=0x%lx\n", r_sepc(), cause);
+      setkilled(p);
+    }
   } else {
     printf("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(), p->pid);
     printf("            sepc=0x%lx stval=0x%lx\n", r_sepc(), r_stval());
     setkilled(p);
   }
 
+done:
   if(killed(p))
     kexit(-1);
 

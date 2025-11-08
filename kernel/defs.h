@@ -60,6 +60,9 @@ void*           kalloc(void);
 void            kfree(void *);
 void            kinit(void);
 void            freebytes(uint64* dst);
+int             get_refcnt(void *);
+void            inc_refcnt(void *);
+void            dec_refcnt(void *);
 
 // log.c
 void            initlog(int, struct superblock*);
@@ -172,6 +175,7 @@ int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
 int             ismapped(pagetable_t, uint64);
 uint64          vmfault(pagetable_t, uint64, int);
+int             cow_handler(pagetable_t, uint64);
 void 			vmprint(pagetable_t);		// LAB_PGTBL
 
 // plic.c

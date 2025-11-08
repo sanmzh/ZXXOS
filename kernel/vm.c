@@ -339,7 +339,6 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   pte_t *pte;
   uint64 pa, i;
   uint flags;
-  char *mem;
 
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
@@ -348,11 +347,22 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
       continue;   // physical page hasn't been allocated
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
-    if((mem = kalloc()) == 0)
-      goto err;
-    memmove(mem, (char*)pa, PGSIZE);
-    if(mappages(new, i, PGSIZE, (uint64)mem, flags) != 0){
-      kfree(mem);
+    
+    // 增加引用计数
+    inc_refcnt((void*)pa);
+    
+    // 如果页面是可写的，清除父子进程的写权限并标记为 COW
+    // 如果页面已经是COW页面，则不需要再次处理
+    if(flags & PTE_W && !(flags & PTE_COW)) {
+      flags = (flags & ~PTE_W) | PTE_COW;
+      // 同时更新父进程的页表项
+      *pte = PA2PTE(pa) | flags;
+    }
+    
+    // 在子进程页表中映射相同的物理页
+    if(mappages(new, i, PGSIZE, (uint64)pa, flags) != 0){
+      // 如果映射失败，减少引用计数
+      dec_refcnt((void*)pa);
       goto err;
     }
   }
@@ -390,14 +400,27 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
     if(va0 >= MAXVA)
       return -1;
   
-    pa0 = walkaddr(pagetable, va0);
-    if(pa0 == 0) {
+    pte = walk(pagetable, va0, 0);
+    if(pte == 0 || (*pte & PTE_V) == 0) {
       if((pa0 = vmfault(pagetable, va0, 0)) == 0) {
         return -1;
       }
+    } else {
+      pa0 = PTE2PA(*pte);
     }
-
-    pte = walk(pagetable, va0, 0);
+    // 检查是否是 COW 页面
+    if((*pte & PTE_COW) && (*pte & PTE_W) == 0) {
+      // 处理 COW 页面
+      if(cow_handler(pagetable, va0) < 0)
+        return -1;
+      
+      // 重新获取页表项，因为 cow_handler 可能已经修改了它
+      pte = walk(pagetable, va0, 0);
+      if(pte == 0 || (*pte & PTE_V) == 0)
+        return -1;
+      // 更新 pa0，因为 cow_handler 可能已经修改了页表项
+      pa0 = PTE2PA(*pte);
+    }
     // forbid copyout over read-only user text pages.
     if((*pte & PTE_W) == 0)
       return -1;
@@ -483,6 +506,56 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
   } else {
     return -1;
   }
+}
+
+// 处理 COW 页错误
+int
+cow_handler(pagetable_t pagetable, uint64 va)
+{
+  if(va >= MAXVA)
+    return -1;
+
+  va = PGROUNDDOWN(va); // 向下取整
+  
+  pte_t *pte = walk(pagetable, va, 0);
+  if(pte == 0 || (*pte & PTE_V) == 0 || (*pte & PTE_COW) == 0)
+    return -1;
+  
+  uint64 pa = PTE2PA(*pte);
+  uint flags = PTE_FLAGS(*pte);
+  
+  // 如果引用计数为 1，则直接写
+  if(get_refcnt((void*)pa) == 1) {
+    flags = (flags & ~PTE_COW) | PTE_W;   // 更新页表项，设置为可写并清除 COW 标记
+    *pte = PA2PTE(pa) | flags;            // 更新页表项，映射到新页面并设置为可写
+    return 0;
+  }
+  // 否则，分配新页面
+  uint64 new_pa = (uint64)kalloc();
+  if(new_pa == 0) {
+    // 内存分配失败，杀死进程
+    struct proc *p = myproc();
+    if(p) {
+      panic("cow_handler: out of memory, killing process");
+      setkilled(p);
+    }
+    return -1;
+  }
+  
+  // 复制页面内容
+  memmove((void*)new_pa, (void*)pa, PGSIZE);
+  
+  // 减少原页面的引用计数
+  dec_refcnt((void*)pa);
+  
+  // 更新页表项，设置为可写并清除 COW 标记
+  flags = (flags & ~PTE_COW) | PTE_W;
+  *pte = PA2PTE(new_pa) | flags;
+  
+  // 刷新 TLB
+  sfence_vma();
+  
+  return 0;
 }
 
 // allocate and map user memory if process is referencing a page
