@@ -59,13 +59,32 @@ main()
 ```bash
 git pull orgin master  # 拉取远程 master 分支最新代码
 
+git checkout -b xxx # 创建并切换到 xxx 分支，进行开发
+
+git checkout master # 切换到 master 分支
 git add . # 添加当前目录所有修改到暂存区
 git status # 查看当前更改状态
 git commit -m "doc: xxx" # 提交暂存区修改
 git push origin master # 推送本地修改到远程 master 分支
+
+git branch -d xxx # 删除本地 xxx 分支
 ```
 
 可以自己建立分支开发，开发完成后合并到主分支。
+
+可参考
+```
+feat : 新功能
+fix : 修复bug
+docs : 文档改变
+style : 代码格式改变
+refactor : 某个已有功能重构
+perf : 性能优化
+test : 增加测试
+build : 改变了build工具 如 grunt换成了 npm
+revert : 撤销上一次的 commit
+chore : 构建过程或辅助工具的变动
+```
 
 AI 参考
 
