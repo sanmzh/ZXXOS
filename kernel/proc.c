@@ -38,6 +38,7 @@ proc_mapstacks(pagetable_t kpgtbl)
     char *pa = kalloc();
     if(pa == 0)
       panic("kalloc");
+    // kalloc已经初始化了引用计数，这里不需要额外处理
     uint64 va = KSTACK((int) (p - proc));
     kvmmap(kpgtbl, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
   }
