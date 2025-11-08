@@ -137,6 +137,46 @@ walkaddr(pagetable_t pagetable, uint64 va)
   return pa;
 }
 
+// pagetable: 当前层级的页表指针
+// level: 当前层级（2是顶层，0是页表最低层）
+// va: 当前页表项对应的虚拟地址起始值
+void
+_vmprint(pagetable_t pagetable, int level, uint64 va)      //  LAB_PGTBL
+{
+  // 根据不同的层级计算每个页表项管理的地址空间大小
+  uint64 sz;
+  if(level == 2){
+    sz = 512 * 512 * PGSIZE;  // level 2: 512个页目录项，每个页目录项管理512个页表项，每个页表项管理1个页
+  } else if(level == 1){
+    sz = 512 * PGSIZE;  // level 1: 512个页表项，每个页表项管理1个页
+  } else {
+    sz = PGSIZE;    // level 0: 1个页表项，管理1个页
+  }
+
+  for (int i = 0; i < 512; ++i, va += sz) { // 遍历当前页表中的所有512个页表项
+    pte_t pte = pagetable[i];
+    if ((pte & PTE_V) == 0)   // 检查每个页表项是否有效
+      continue;
+    for (int j = level; j < 3; ++j) {
+      printf(" ..");
+    }
+    // 打印页表项的虚拟地址、PTE值和物理地址
+    printf("%p: pte %p pa %p\n", (pagetable_t)va, (pagetable_t)pte, (pagetable_t)PTE2PA(pte));
+    
+    // 递归遍历
+    if ((pte & (PTE_R | PTE_W | PTE_X)) == 0) { // 如果页表项不包含任何权限（R/W/X），说明这是一个指向下一级页表的指针
+      _vmprint((pagetable_t)PTE2PA(pte), level - 1, va);
+    }
+  }
+}
+
+void
+vmprint(pagetable_t pagetable)      //  LAB_PGTBL
+{
+  printf("page table %p\n", pagetable);
+  _vmprint(pagetable, 2, 0);
+}
+
 // Create PTEs for virtual addresses starting at va that refer to
 // physical addresses starting at pa.
 // va and size MUST be page-aligned.

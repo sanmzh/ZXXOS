@@ -105,6 +105,9 @@ extern uint64 sys_close(void);
 extern uint64 sys_trace(void);
 extern uint64 sys_sysinfo(void);
 
+// page table
+extern uint64 sys_kpgtbl(void);
+
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
 static uint64 (*syscalls[])(void) = {
@@ -132,6 +135,9 @@ static uint64 (*syscalls[])(void) = {
 
 [SYS_trace]   sys_trace,
 [SYS_sysinfo] sys_sysinfo,
+
+// LAB_PGTBL
+[SYS_kpgtbl]  sys_kpgtbl,
 };
 
 //定义系统调用名称的字符串数组

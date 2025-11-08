@@ -15,4 +15,4 @@ kernel/kernel
 user/usys.S
 .gdbinit
 TAGS
-.vscode/
+.vscode
