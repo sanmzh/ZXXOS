@@ -88,6 +88,16 @@ sys_pause(void)
   return 0;
 }
 
+int
+sys_kpgtbl(void)          // LAB_PGTBL
+{
+  struct proc *p;
+
+  p = myproc();
+  vmprint(p->pagetable);
+  return 0;
+}
+
 uint64
 sys_kill(void)
 {

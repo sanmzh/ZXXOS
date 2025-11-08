@@ -63,4 +63,7 @@
 #define SYS_pipe       SYS_pipe2       // 创建管道（兼容旧版）
 #define SYS_exec       SYS_execve      // 执行程序（兼容旧版）
 
+// System calls for labs
+#define SYS_kpgtbl     534				// 500 + 34 // 获取页表	// LAB_PGTBL
+
 #endif // _SYS_H
