@@ -46,3 +46,9 @@ entry("uptime");
 entry("trace");     # 用户态下的程序通过调用trace函数来使用跟踪系统调用功能
 entry("sysinfo");
 entry("kpgtbl");
+
+# 网络相关系统调用
+entry("bind");
+entry("unbind");
+entry("send");
+entry("recv");

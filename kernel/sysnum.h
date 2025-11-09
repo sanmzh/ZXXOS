@@ -66,4 +66,9 @@
 // System calls for labs
 #define SYS_kpgtbl     534				// 500 + 34 // 获取页表	// LAB_PGTBL
 
+#define SYS_bind      529				// 500 + 
+#define SYS_unbind    530
+#define SYS_send      531
+#define SYS_recv      532
+
 #endif // _SYS_H
