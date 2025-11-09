@@ -35,6 +35,10 @@ int unbind(uint16);
 int send(uint16, uint32, uint16, char *, uint32);
 int recv(uint16, uint32*, uint16*, char *, uint32);
 // END LAB_NET
+// #ifdef LAB_LOCK
+int rwlktest(void);
+int cpupin(int);
+// #endif
 
 // ulib.c
 int stat(const char*, struct stat*);
@@ -50,6 +54,9 @@ int memcmp(const void *, const void *, uint);
 void *memcpy(void *, const void *, uint);
 char* sbrk(int);
 char* sbrklazy(int);
+// #ifdef LAB_LOCK
+int statistics(void*, int);
+// #endif
 
 // printf.c
 void fprintf(int, const char*, ...) __attribute__ ((format (printf, 2, 3)));

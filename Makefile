@@ -36,6 +36,12 @@ OBJS += \
   $K/net.o \
   $K/pci.o \
 
+# ifeq ($(LAB),lock)
+OBJS += \
+	$K/stats.o\
+	$K/sprintf.o
+# endif
+
 # riscv64-unknown-elf- or riscv64-linux-gnu-
 # perhaps in /opt/riscv/bin
 #TOOLPREFIX = 

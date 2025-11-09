@@ -153,3 +153,20 @@ sys_sysinfo(void)
 
   return 0;
 }
+
+// LAB_LOCK
+uint64
+sys_cpupin(void)
+{
+  struct proc *p = myproc();
+  int cpu;
+
+  argint(0, &cpu);
+  if (cpu < 0 || cpu >= NCPU)
+    return -1;
+  acquire(&p->lock);
+  p->pincpu = &cpus[cpu];
+  release(&p->lock);
+  return 0;
+}
+// END LAB_LOCK

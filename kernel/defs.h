@@ -8,6 +8,9 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+// LAB_LOCK
+struct rwspinlock;
+// END LAB_LOCK
 
 // bio.c
 void            binit(void);
@@ -119,6 +122,15 @@ void            release(struct spinlock*);
 void            push_off(void);
 void            pop_off(void);
 int				atomic_read4(int *addr);
+// LAB_LOCK
+void            freelock(struct spinlock*);
+void            initrwlock(struct rwspinlock*);
+void            read_acquire(struct rwspinlock*);
+void            read_release(struct rwspinlock*);
+void            write_acquire(struct rwspinlock*);
+void            write_release(struct rwspinlock*);
+uint64          sys_rwlktest(void);
+// END LAB_LOCK
 
 // sleeplock.c
 void            acquiresleep(struct sleeplock*);
@@ -208,3 +220,12 @@ void            netinit(void);
 void            net_rx(char *buf, int len);
 
 // END LAB_NET
+
+// LAB_LOCK
+// stats.c
+void            statsinit(void);
+void            statsinc(void);
+
+// sprintf.c
+int             snprintf(char*, unsigned long, const char*, ...);
+// END LAB_LOCK

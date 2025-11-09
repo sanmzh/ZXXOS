@@ -25,6 +25,9 @@ main()
 {
   if(cpuid() == 0){
     consoleinit();
+// LAB_LOCK
+    statsinit();
+// END LAB_LOCK
     printfinit();
     printlogo();
     printf("\n");
