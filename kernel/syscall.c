@@ -108,6 +108,12 @@ extern uint64 sys_sysinfo(void);
 // page table
 extern uint64 sys_kpgtbl(void);
 
+// LAB_NET
+extern uint64 sys_bind(void);
+extern uint64 sys_unbind(void);
+extern uint64 sys_send(void);
+extern uint64 sys_recv(void);
+
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
 static uint64 (*syscalls[])(void) = {
@@ -138,6 +144,13 @@ static uint64 (*syscalls[])(void) = {
 
 // LAB_PGTBL
 [SYS_kpgtbl]  sys_kpgtbl,
+
+// LAB_NET
+[SYS_bind] sys_bind,
+[SYS_unbind] sys_unbind,
+[SYS_send] sys_send,
+[SYS_recv] sys_recv,
+
 };
 
 //定义系统调用名称的字符串数组

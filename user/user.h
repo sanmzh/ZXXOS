@@ -29,6 +29,12 @@ int uptime(void);
 int trace(int);         // 用户态程序可以找到trace系统调用的跳板入口函数
 int sysinfo(struct sysinfo *);
 void kpgtbl(void);  	// LAB_PGTBL 打印页表
+// LAB_NET
+int bind(uint16);
+int unbind(uint16);
+int send(uint16, uint32, uint16, char *, uint32);
+int recv(uint16, uint32*, uint16*, char *, uint32);
+// END LAB_NET
 
 // ulib.c
 int stat(const char*, struct stat*);
