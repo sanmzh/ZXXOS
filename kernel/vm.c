@@ -8,6 +8,23 @@
 #include "proc.h"
 #include "fs.h"
 
+// 引用 kalloc.c 中的 kmem 结构体
+extern struct {
+  struct spinlock lock;
+  struct run *freelist;
+} kmem[NCPU];
+
+// 引用 kalloc.c 中的 refcnt 结构体
+extern struct {
+  struct spinlock lock;
+  int ref_count[(PHYSTOP - KERNBASE) / PGSIZE];
+} refcnt;
+
+// 引用 kalloc.c 中的 run 结构体
+struct run {
+  struct run *next;
+};
+
 /*
  * the kernel's page table.
  */
@@ -541,13 +558,40 @@ cow_handler(pagetable_t pagetable, uint64 va)
   // 否则，分配新页面
   uint64 new_pa = (uint64)kalloc();
   if(new_pa == 0) {
-    // 内存分配失败，杀死进程
-    struct proc *p = myproc();
-    if(p) {
-      panic("cow_handler: out of memory, killing process");
-      setkilled(p);
+    // 尝试从其他CPU窃取内存
+    for(int i = 0; i < NCPU && new_pa == 0; i++) {
+      acquire(&kmem[i].lock);
+      if(kmem[i].freelist) {
+        struct run *r = kmem[i].freelist;
+        kmem[i].freelist = r->next;
+        release(&kmem[i].lock);
+        new_pa = (uint64)r;
+        // 初始化新页面的引用计数为1
+        acquire(&refcnt.lock);
+        refcnt.ref_count[((uint64)r - KERNBASE) / PGSIZE] = 1;
+        release(&refcnt.lock);
+      } else {
+        release(&kmem[i].lock);
+      }
     }
-    return -1;
+
+    // 如果仍然无法分配内存，尝试等待一段时间
+    if(new_pa == 0) {
+      for(int i = 0; i < 100 && new_pa == 0; i++) {
+        yield();
+        new_pa = (uint64)kalloc();
+      }
+    }
+
+    // 如果仍然无法分配内存，杀死进程
+    if(new_pa == 0) {
+      struct proc *p = myproc();
+      if(p) {
+        printf("cow_handler: out of memory, killing process %d", p->pid);
+        setkilled(p);
+      }
+      return -1;
+    }
   }
   
   // 复制页面内容

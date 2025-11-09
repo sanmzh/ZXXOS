@@ -52,3 +52,7 @@ entry("bind");
 entry("unbind");
 entry("send");
 entry("recv");
+
+# lock
+entry("rwlktest");
+entry("cpupin");
