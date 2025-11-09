@@ -66,9 +66,14 @@
 // System calls for labs
 #define SYS_kpgtbl     534				// 500 + 34 // 获取页表	// LAB_PGTBL
 
+// LAB_NET
 #define SYS_bind      529				// 500 + 
 #define SYS_unbind    530
 #define SYS_send      531
 #define SYS_recv      532
+
+// LAB_LOCK
+#define SYS_rwlktest  535
+#define SYS_cpupin    536
 
 #endif // _SYS_H

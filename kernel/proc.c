@@ -133,6 +133,10 @@ found:
     return 0;
   }
 
+// LAB_LOCK
+  p->pincpu = 0;
+// END LAB_LOCK
+
   // An empty user page table.
   p->pagetable = proc_pagetable(p);
   if(p->pagetable == 0){
@@ -442,9 +446,18 @@ scheduler(void)
     intr_on();
     intr_off();
 
-    int found = 0;
+    int nproc = 0;
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
+      if (p->state != UNUSED) {
+        ++nproc;
+      }
+// LAB_LOCK
+      if(p->pincpu && p->pincpu != c) {
+        release(&p->lock);
+        continue;
+      }
+// END LAB_LOCK
       if(p->state == RUNNABLE) {
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
@@ -456,13 +469,15 @@ scheduler(void)
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
-        found = 1;
       }
       release(&p->lock);
     }
-    if(found == 0) {
+    if(nproc <= 2) {   // only init and sh exist
       // nothing to run; stop running on this core until an interrupt.
+      intr_on();
+#ifndef LAB_FS
       asm volatile("wfi");
+#endif
     }
   }
 }

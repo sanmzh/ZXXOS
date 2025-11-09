@@ -106,4 +106,8 @@ struct proc {
   char name[16];               // Process name (debugging)
 
   uint64 trace_mask;        //存储进程的系统调用跟踪掩码,用于控制哪些系统调用需要被跟踪
+
+// LAB_LOCK
+  struct cpu *pincpu;
+// END LAB_LOCK
 };
