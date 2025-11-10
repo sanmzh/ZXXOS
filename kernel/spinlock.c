@@ -122,29 +122,98 @@ release(struct spinlock *lk)
 static void
 read_acquire_inner(struct rwspinlock *rwlk)
 {
-  // Replace this with your implementation.
-  acquire(&rwlk->l);
+  uint32 old_state, new_state;
+
+  while (1) {
+    // 首先检查是否有等待的写者
+    uint32 writers_waiting = __atomic_load_n(&rwlk->writers, __ATOMIC_ACQUIRE);
+
+    // 如果有等待的写者，必须等待
+    if (writers_waiting > 0) {
+      // 自旋等待直到没有写者
+      do {
+        __sync_synchronize(); // 内存屏障
+        writers_waiting = __atomic_load_n(&rwlk->writers, __ATOMIC_ACQUIRE);
+      } while (writers_waiting > 0);
+      continue; // 写者消失后，从头开始
+    }
+
+    // 检查锁状态
+    old_state = __atomic_load_n(&rwlk->state, __ATOMIC_ACQUIRE);
+
+    // 如果写锁被持有，等待
+    if (old_state & 1) {
+      // 自旋等待写锁释放
+      do {
+        __sync_synchronize(); // 内存屏障
+        old_state = __atomic_load_n(&rwlk->state, __ATOMIC_ACQUIRE);
+      } while (old_state & 1);
+      // 写锁释放后，从头开始检查新的写者
+      continue;
+    }
+
+    // 最终检查是否有新的写者出现
+    if (__atomic_load_n(&rwlk->writers, __ATOMIC_ACQUIRE) > 0) {
+      continue; // 如果有写者出现，必须等待
+    }
+
+    // 尝试增加读者计数（加 2）
+    new_state = old_state + 2;
+
+    // 原子更新状态
+    if (__atomic_compare_exchange_n(&rwlk->state, &old_state, new_state,
+                                   0, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE)) {
+      break; // 成功获取读锁
+    }
+
+    // 如果失败，检查是否是因为写者出现
+    if (__atomic_load_n(&rwlk->writers, __ATOMIC_ACQUIRE) > 0) {
+      continue; // 如果有写者出现，从头开始
+    }
+  }
 }
 
 static void
 read_release_inner(struct rwspinlock *rwlk)
 {
-  // Replace this with your implementation.
-  release(&rwlk->l);
+  // 使用原子操作安全地减少读者计数
+  uint32 old_state, new_state;
+
+  do {
+    old_state = __atomic_load_n(&rwlk->state, __ATOMIC_ACQUIRE);
+    // 减少读者计数（减 2）
+    new_state = old_state - 2;
+  } while (!__atomic_compare_exchange_n(&rwlk->state, &old_state, new_state,
+                                        0, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE));
 }
 
 static void
 write_acquire_inner(struct rwspinlock *rwlk)
 {
-  // Replace this with your implementation.
-  acquire(&rwlk->l);
+  // 增加写者计数以表示意图
+  __atomic_fetch_add(&rwlk->writers, 1, __ATOMIC_ACQ_REL);
+
+  // 等待锁完全空闲（无读者或写者）
+  uint32 old_state;
+  do {
+    old_state = __atomic_load_n(&rwlk->state, __ATOMIC_ACQUIRE);
+    // 自旋等待锁被释放
+    while (old_state != 0) {
+      __sync_synchronize(); // 内存屏障
+      old_state = __atomic_load_n(&rwlk->state, __ATOMIC_ACQUIRE);
+    }
+  } while (!__atomic_compare_exchange_n(&rwlk->state, &old_state, 1,
+                                        0, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE));
+
+  // 减少写者计数，因为我们已经获取了锁
+  __atomic_fetch_sub(&rwlk->writers, 1, __ATOMIC_ACQ_REL);
 }
 
 static void
 write_release_inner(struct rwspinlock *rwlk)
 {
-  // Replace this with your implementation.
-  release(&rwlk->l);
+  // 使用原子操作安全地释放写锁
+  __atomic_store_n(&rwlk->state, 0, __ATOMIC_RELEASE);
 }
 
 void
@@ -178,8 +247,11 @@ write_release(struct rwspinlock *rwlk)
 void
 initrwlock(struct rwspinlock *rwlk)
 {
-  // Replace this with your implementation.
-  initlock(&rwlk->l, "rwlk");
+  initlock(&rwlk->lk, "rwlk");
+  rwlk->state = 0;  // 初始状态：无读者，无写者
+  rwlk->writers = 0;  // 初始无等待的写者
+  rwlk->name = "rwlk";  // 设置名称
+  findslot(&rwlk->lk);  // 注册锁
 }
 
 // Test rwspinlock implementation.

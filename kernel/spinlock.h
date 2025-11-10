@@ -14,7 +14,9 @@ struct spinlock {
 // LAB_LOCK
 // Reader-writer lock.
 struct rwspinlock {
-  // Replace this with your implementation.
-  struct spinlock l;
+  struct spinlock lk;    // 内部自旋锁，用于保护状态
+  uint32 state;          // 锁状态：bit 0 = 写锁，bits 1-31 = 读者计数
+  uint32 writers;        // 等待的写者数量
+  char *name;            // 锁的名称
 };
 // END LAB_LOCK
