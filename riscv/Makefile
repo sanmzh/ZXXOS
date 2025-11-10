@@ -1,7 +1,5 @@
 K=kernel
 U=user
-R=riscv
-
 
 OBJS = \
   $K/entry.o \
@@ -30,20 +28,25 @@ OBJS = \
   $K/sysfile.o \
   $K/kernelvec.o \
   $K/plic.o \
-  $K/virtio_disk.o
+  $K/virtio_disk.o \
 
 # LAB_NET
 OBJS += \
   $K/e1000.o \
   $K/net.o \
-  $K/pci.o
+  $K/pci.o \
 
 # ifeq ($(LAB),lock)
 OBJS += \
 	$K/stats.o\
 	$K/sprintf.o
 # endif
-  
+
+# riscv64-unknown-elf- or riscv64-linux-gnu-
+# perhaps in /opt/riscv/bin
+#TOOLPREFIX = 
+
+# Try to infer the correct TOOLPREFIX if not set
 ifndef TOOLPREFIX
 TOOLPREFIX := $(shell if riscv64-unknown-elf-objdump -i 2>&1 | grep 'elf64-big' >/dev/null 2>&1; \
 	then echo 'riscv64-unknown-elf-'; \
@@ -85,9 +88,6 @@ CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 &
 
 CFLAGS += -DNET_TESTS_PORT=$(SERVERPORT)		# LAB_NET
 
-# 为用户程序添加头文件搜索路径
-USER_CFLAGS = $(CFLAGS) -I$R
-
 # Disable PIE when possible (for Ubuntu 16.10 toolchain)
 ifneq ($(shell $(CC) -dumpspecs 2>/dev/null | grep -e '[^f]no-pie'),)
 CFLAGS += -fno-pie -no-pie
@@ -98,72 +98,48 @@ endif
 
 LDFLAGS = -z max-page-size=4096
 
-$K/kernel: $(OBJS) $R/$K/kernel.ld
-	$(LD) $(LDFLAGS) -T $R/$K/kernel.ld -o $K/kernel $(OBJS) 
+$K/kernel: $(OBJS) $K/kernel.ld
+	$(LD) $(LDFLAGS) -T $K/kernel.ld -o $K/kernel $(OBJS) 
 	$(OBJDUMP) -S $K/kernel > $K/kernel.asm
 	$(OBJDUMP) -t $K/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $K/kernel.sym
 
-
-$K/%.o: $R/$K/%.S
-	$(CC) -march=rv64gc -g -c -o $@ $<
-
 $K/%.o: $K/%.S
 	$(CC) -march=rv64gc -g -c -o $@ $<
-	
-$K/%.o: $R/$K/%.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-	
+
 tags: $(OBJS)
-	etags riscv/kernel/*.S riscv/kernel/*.c
-	
+	etags kernel/*.S kernel/*.c
+
 ULIB = $U/ulib.o $U/usys.o $U/printf.o $U/umalloc.o
 # ifeq ($(LAB),lock)
 ULIB += $U/statistics.o
 # endif
 
-$U/ulib.o: $R/$U/ulib.c
-	$(CC) $(USER_CFLAGS) -c -o $@ $<
-
-$U/printf.o: $R/$U/printf.c  
-	$(CC) $(USER_CFLAGS) -c -o $@ $<
-
-$U/umalloc.o: $R/$U/umalloc.c
-	$(CC) $(USER_CFLAGS) -c -o $@ $<
-	
-$U/_%: $U/%.o $(ULIB) $R/$U/user.ld
-	$(LD) $(LDFLAGS) -T $R/$U/user.ld -o $@ $< $(ULIB)
+_%: %.o $(ULIB) $U/user.ld
+	$(LD) $(LDFLAGS) -T $U/user.ld -o $@ $< $(ULIB)
 	$(OBJDUMP) -S $@ > $*.asm
 	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $*.sym
 
-$U/usys.S : $R/$U/usys.pl
-	perl $R/$U/usys.pl > $U/usys.S
+$U/usys.S : $U/usys.pl
+	perl $U/usys.pl > $U/usys.S
 
 $U/usys.o : $U/usys.S
-	$(CC) $(USER_CFLAGS) -c -o $U/usys.o $U/usys.S
+	$(CC) $(CFLAGS) -c -o $U/usys.o $U/usys.S
 
 $U/_forktest: $U/forktest.o $(ULIB)
 	# forktest has less library code linked in - needs to be small
 	# in order to be able to max out the proc table.
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $U/_forktest $U/forktest.o $U/ulib.o $U/usys.o
 	$(OBJDUMP) -S $U/_forktest > $U/forktest.asm
-	
-# 修改用户程序编译规则，从 riscv/user/ 找源文件
-$U/%.o: $R/$U/%.c
-	$(CC) $(USER_CFLAGS) -c -o $@ $<
 
-$U/%.o: $R/$U/%.S
-	$(CC) $(USER_CFLAGS) -c -o $@ $<
-	
-mkfs/mkfs: $R/mkfs/mkfs.c $R/$K/fs.h $R/$K/param.h
-	@echo "=== 编译 mkfs 的环境信息 ==="
-	@echo "编译器: $(CC)"
-	@echo "CFLAGS: $(CFLAGS)"
-	@echo "源文件: $R/mkfs/mkfs.c"
-	@echo "头文件搜索路径:"
-	@$(CC) -E -Wp,-v -xc /dev/null 2>&1 | grep -E "^ "
-	@echo "=== 开始编译 ==="
-	gcc -Wno-unknown-attributes -I. -I$R -o mkfs/mkfs $R/mkfs/mkfs.c
-	
+mkfs/mkfs: mkfs/mkfs.c $K/fs.h $K/param.h
+	gcc -Wno-unknown-attributes -I. -o mkfs/mkfs mkfs/mkfs.c
+
+# Prevent deletion of intermediate files, e.g. cat.o, after first build, so
+# that disk image changes after first build are persistent until clean.  More
+# details:
+# http://www.gnu.org/software/make/manual/html_node/Chained-Rules.html
+.PRECIOUS: %.o
+
 UPROGS=\
 	$U/_cat\
 	$U/_echo\
@@ -195,8 +171,16 @@ UPROGS=\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
-	
--include riscv/kernel/*.d riscv/user/*.d
+
+-include kernel/*.d user/*.d
+
+clean: 
+	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
+	*/*.o */*.d */*.asm */*.sym \
+	$K/kernel fs.img \
+	mkfs/mkfs .gdbinit \
+        $U/usys.S \
+	$(UPROGS)
 
 # try to generate a unique GDB port
 GDBPORT = $(shell expr `id -u` % 5000 + 25000)
@@ -205,17 +189,17 @@ QEMUGDB = $(shell if $(QEMU) -help | grep -q '^-gdb'; \
 	then echo "-gdb tcp::$(GDBPORT)"; \
 	else echo "-s -p $(GDBPORT)"; fi)
 ifndef CPUS
-CPUS := 3
+CPUS := 4
 endif
+
+# LAB_NET
+FWDPORT1 = $(shell expr `id -u` % 5000 + 25999)
+FWDPORT2 = $(shell expr `id -u` % 5000 + 30999)
 
 QEMUOPTS = -machine virt -bios none -kernel $K/kernel -m 128M -smp $(CPUS) -nographic
 QEMUOPTS += -global virtio-mmio.force-legacy=false
 QEMUOPTS += -drive file=fs.img,if=none,format=raw,id=x0
 QEMUOPTS += -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
-
-# LAB_NET
-FWDPORT1 = $(shell expr `id -u` % 5000 + 25999)
-FWDPORT2 = $(shell expr `id -u` % 5000 + 30999)
 
 # LAB_NET
 QEMUOPTS += -netdev user,id=net0,hostfwd=udp::$(FWDPORT1)-:2000,hostfwd=udp::$(FWDPORT2)-:2001 -object filter-dump,id=net0,netdev=net0,file=packets.pcap
@@ -244,17 +228,3 @@ check-qemu-version:
 		echo "ERROR: Need qemu version >= $(MIN_QEMU_VERSION)"; \
 		exit 1; \
 	fi
-
-clean:
-	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
-		*.asm *.sym *.d packets.pcap \
-		$K/*.o $K/*.d $K/*.asm $K/*.sym \
-		$U/*.o $U/*.d $U/*.asm $U/*.sym \
-		$K/kernel fs.img \
-		mkfs/mkfs .gdbinit \
-		$U/usys.S \
-		$(UPROGS) \
-		$R/$K/*.o $R/$K/*.d $R/$K/*.asm $R/$K/*.sym \
-		$R/$U/*.o $R/$U/*.d $R/$U/*.asm $R/$U/*.sym \
-		$R/$K/kernel $R/$U/usys.S
-
