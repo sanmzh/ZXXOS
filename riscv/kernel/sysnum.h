@@ -4,7 +4,7 @@
 // 系统调用号定义 - 整合版本
 
 // 文件系统相关
-#define SYS_getcwd     17    // 获取当前工作目录
+#define SYS_getcwd     16    // 获取当前工作目录
 #define SYS_dup        23    // 复制文件描述符
 #define SYS_dup3       24    // 复制文件描述符到指定新描述符
 #define SYS_readdir    27    // 读取目录项 [自定义]
@@ -29,7 +29,7 @@
 #define SYS_mkdir       7    // 创建目录 [自定义]
 #define SYS_sbrk       12    // 调整程序数据段大小 [自定义]
 #define SYS_sleep      13    // 使进程休眠（秒） [自定义]
-#define SYS_pause      34    // 暂停进程 [自定义]
+#define SYS_pause      33    // 暂停进程 [自定义]
 #define SYS_exit       93    // 进程退出
 #define SYS_nanosleep 101    // 线程睡眠（纳秒精度）
 #define SYS_sched_yield 124  // 让出调度器
@@ -49,13 +49,13 @@
 #define SYS_mknod      17    // 创建设备文件 [自定义]
 #define SYS_unlink     18    // 删除文件 [自定义]
 #define SYS_link       19    // 创建硬链接 [自定义]
-#define SYS_trace      18    // 用于调试，追踪系统调用 [自定义]
+#define SYS_trace      20    // 用于调试，追踪系统调用 [自定义]
 #define SYS_dev        21    // 设备文件操作 [自定义]
 #define SYS_test_proc  22    // 自定义的测试调用 [自定义]
 #define SYS_rename     26    // 重命名文件或目录 [自定义]
 #define SYS_remove     117   // 删除文件或目录 [自定义]
 #define SYS_uptime     14    // 获取系统运行时间 [自定义]
-#define SYS_sysinfo    19    // 获取通用系统信息 [自定义]
+#define SYS_sysinfo    25    // 获取通用系统信息 [自定义]
 #define SYS_shutdown   210   // 关闭系统 [自定义]
 
 // 兼容性定义（避免重复）
