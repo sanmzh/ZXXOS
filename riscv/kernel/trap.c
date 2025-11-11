@@ -89,16 +89,27 @@ usertrap(void)
     }
     
     // 如果不是COW页面或者COW处理失败，尝试懒分配
-    if(vmfault(p->pagetable, va, (cause == 13)? 1 : 0) != 0) {
-      // 懒分配也失败
-      printf("usertrap(): page fault at va=%p, pid=%d\n", (void*)va, p->pid);
-      printf("            sepc=0x%lx scause=0x%lx\n", r_sepc(), cause);
-      setkilled(p);
+    uint64 vmfault_result = vmfault(p->pagetable, va, (cause == 13)? 1 : 0);
+    
+    if(vmfault_result != 0) {
+      // vmfault成功，页面已分配
+      goto done;
     } else {
-      // vmfault返回0，表示无法处理该页面错误
-      // 这可能是访问了内核地址空间或其他无效地址
-      printf("usertrap(): vmfault returned 0 for va=%p, pid=%d\n", (void*)va, p->pid);
-      setkilled(p);
+      // vmfault返回0，需要区分不同情况
+      if(va >= MAXVA || va >= KERNBASE) {
+        // 访问内核地址空间或超过MAXVA的地址，杀死进程
+        printf("usertrap(): invalid address va=%p, pid=%d\n", (void*)va, p->pid);
+        setkilled(p);
+      } else if(va >= p->sz) {
+        // 超出进程大小限制，杀死进程
+        printf("usertrap(): address beyond process size va=%p, pid=%d\n", (void*)va, p->pid);
+        setkilled(p);
+      } else {
+        // 其他情况，可能是内存不足或其他错误，杀死进程
+        printf("usertrap(): page fault at va=%p, pid=%d\n", (void*)va, p->pid);
+        printf("            sepc=0x%lx scause=0x%lx\n", r_sepc(), cause);
+        setkilled(p);
+      }
     }
   } else {
     printf("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(), p->pid);
