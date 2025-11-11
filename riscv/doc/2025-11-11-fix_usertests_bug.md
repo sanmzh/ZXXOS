@@ -121,3 +121,109 @@ uint64 sys_trace(void) {
 ## 结论
 
 系统调用号重复导致系统调用表中的函数指针被覆盖，使得调用一个系统调用时实际执行的是另一个系统调用。这种情况下，返回值和行为与预期不符，导致测试失败。通过确保每个系统调用都有唯一的编号，可以解决这个问题。
+
+
+
+
+# kernmem测试问题分析与解决方案
+
+```bash
+$ usertests kernmem
+usertests starting
+test kernmem: kernmem: testing kernel memory protection, total tests: 40
+kernmem: [1/40] testing address 0x0000000080000000
+kernmem: [CHILD] trying to read 0x0000000080000000
+```
+
+## 问题分析
+
+在运行`usertests kernmem`测试时，测试程序卡在第一步，即子进程尝试读取内核地址空间(0x80000000)后没有继续执行。
+
+通过分析代码，发现两个主要问题：
+
+1. **vmfault函数缺少对内核地址空间的检查**：
+   - 当用户进程尝试访问内核地址空间时，会触发页面错误
+   - vmfault函数只检查了地址是否超出进程大小(p->sz)，但没有检查是否是内核地址空间
+   - 这导致vmfault尝试为内核地址分配页面，而不是直接拒绝访问
+
+2. **trap.c中页面错误处理逻辑不完整**：
+   - 当vmfault返回0时，原始代码没有正确处理这种情况
+   - vmfault返回0表示无法处理该页面错误，但代码没有杀死进程
+   - 这导致子进程继续执行，而不是被正确终止
+
+## 解决方案
+
+### 1. 修改vmfault函数，添加对内核地址空间的检查
+
+```c
+vmfault(pagetable_t pagetable, uint64 va, int read)
+{
+  uint64 mem;
+  struct proc *p = myproc();
+
+  // 检查是否超出进程大小限制
+  if (va >= p->sz)
+    return 0;
+    
+  // 检查是否是内核地址空间
+  if (va >= KERNBASE)
+    return 0;
+    
+  va = PGROUNDDOWN(va);
+  if(ismapped(pagetable, va)) {
+    return 0;
+  }
+  mem = (uint64) kalloc();
+  if(mem == 0)
+    return 0;
+  memset((void *) mem, 0, PGSIZE);
+  if (mappages(p->pagetable, va, PGSIZE, mem, PTE_W|PTE_U|PTE_R) != 0) {
+    kfree((void *)mem);
+    return 0;
+  }
+  return mem;
+}
+```
+
+### 2. 修改trap.c中的页面错误处理逻辑
+
+```c
+// 如果不是COW页面或者COW处理失败，尝试懒分配
+if(vmfault(p->pagetable, va, (cause == 13)? 1 : 0) != 0) {
+  // 懒分配也失败
+  printf("usertrap(): page fault at va=%p, pid=%d\n", (void*)va, p->pid);
+  printf("            sepc=0x%lx scause=0x%lx\n", r_sepc(), cause);
+  setkilled(p);
+} else {
+  // vmfault返回0，表示无法处理该页面错误
+  // 这可能是访问了内核地址空间或其他无效地址
+  printf("usertrap(): vmfault returned 0 for va=%p, pid=%d\n", (void*)va, p->pid);
+  setkilled(p);
+}
+```
+
+## 实施步骤
+
+1. 修改`/home/sanm/OS/ZXXOS/riscv/kernel/vm.c`文件中的vmfault函数，添加对内核地址空间的检查
+2. 修改`/home/sanm/OS/ZXXOS/riscv/kernel/trap.c`文件中的页面错误处理逻辑
+3. 重新编译系统：`make clean && make qemu`
+4. 运行测试：`usertests kernmem`
+
+## 预期结果
+
+修改后，kernmem测试应该能够正常运行，输出类似以下内容：
+
+```
+test kernmem: kernmem: testing kernel memory protection, total tests: 40
+kernmem: [1/40] testing address 0x0000000080000000
+usertrap(): vmfault returned 0 for va=0x80000000, pid=3
+kernmem: [1/40] OK - child killed as expected
+kernmem: [2/40] testing address 0x000000008000c350
+usertrap(): vmfault returned 0 for va=0x8000c350, pid=4
+kernmem: [2/40] OK - child killed as expected
+...
+kernmem: SUCCESS - all 40 tests passed
+```
+
+
+这些修改确保了当用户进程尝试访问内核地址空间时，会被正确地杀死，从而通过了kernmem测试。
