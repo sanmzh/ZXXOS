@@ -2121,22 +2121,42 @@ kernmem(char *s)
 {
   char *a;
   int pid;
-
+  int count = 0;
+  int total = (KERNBASE+2000000 - KERNBASE) / 50000;
+  
+  printf("%s: testing kernel memory protection, total tests: %d\n", s, total);
+  
   for(a = (char*)(KERNBASE); a < (char*) (KERNBASE+2000000); a += 50000){
+    count++;
+    printf("%s: [%d/%d] testing address %p\n", s, count, total, a);
+    
     pid = fork();
     if(pid < 0){
       printf("%s: fork failed\n", s);
       exit(1);
     }
+    
     if(pid == 0){
-      printf("%s: oops could read %p = %x\n", s, a, *a);
+      // 子进程
+      printf("%s: [CHILD] trying to read %p\n", s, a);
+      int val = *a;
+      printf("%s: [CHILD] ERROR: could read %p = %x\n", s, a, val);
       exit(1);
     }
+    
+    // 父进程
     int xstatus;
     wait(&xstatus);
-    if(xstatus != -1)  // did kernel kill child?
+    
+    if(xstatus == -1) {
+      printf("%s: [%d/%d] OK - child killed as expected\n", s, count, total);
+    } else {
+      printf("%s: [%d/%d] FAILED - child exited with status %d (expected -1)\n", s, count, total, xstatus);
       exit(1);
+    }
   }
+  
+  printf("%s: SUCCESS - all %d tests passed\n", s, total);
 }
 
 // user code should not be able to write to addresses above MAXVA.

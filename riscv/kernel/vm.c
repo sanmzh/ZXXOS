@@ -635,7 +635,12 @@ vmfault(pagetable_t pagetable, uint64 va, int read)
   uint64 mem;
   struct proc *p = myproc();
 
+  // 检查是否超出进程大小限制
   if (va >= p->sz)
+    return 0;
+    
+  // 检查是否是内核地址空间
+  if (va >= KERNBASE)
     return 0;
   va = PGROUNDDOWN(va);
   if(ismapped(pagetable, va)) {

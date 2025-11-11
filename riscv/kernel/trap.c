@@ -94,6 +94,11 @@ usertrap(void)
       printf("usertrap(): page fault at va=%p, pid=%d\n", (void*)va, p->pid);
       printf("            sepc=0x%lx scause=0x%lx\n", r_sepc(), cause);
       setkilled(p);
+    } else {
+      // vmfault返回0，表示无法处理该页面错误
+      // 这可能是访问了内核地址空间或其他无效地址
+      printf("usertrap(): vmfault returned 0 for va=%p, pid=%d\n", (void*)va, p->pid);
+      setkilled(p);
     }
   } else {
     printf("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(), p->pid);
