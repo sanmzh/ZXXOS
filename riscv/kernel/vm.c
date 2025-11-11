@@ -122,8 +122,11 @@ kvminithart()
 pte_t *
 walk(pagetable_t pagetable, uint64 va, int alloc)
 {
-  if(va >= MAXVA)
-    panic("walk");
+  if(va >= MAXVA) {
+    // 不再直接panic，而是返回0表示无效地址
+    // 调用者应该处理这种情况，通常会导致进程被杀死
+    return 0;
+  }
 
   for(int level = 2; level > 0; level--) {
     pte_t *pte = &pagetable[PX(level, va)];

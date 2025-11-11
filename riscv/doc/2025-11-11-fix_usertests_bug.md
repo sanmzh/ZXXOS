@@ -227,3 +227,119 @@ kernmem: SUCCESS - all 40 tests passed
 
 
 这些修改确保了当用户进程尝试访问内核地址空间时，会被正确地杀死，从而通过了kernmem测试。
+
+
+
+
+# 修复MAXVAplus测试panic问题的文档
+
+## 问题描述
+
+在运行`usertests MAXVAplus`测试时，系统出现panic错误，错误信息为：
+```
+test MAXVAplus: panic: walk
+backtrace:
+0x0000000080000898
+0x0000000080001da6
+0x00000000800038c6
+```
+
+## 问题分析
+
+1. MAXVAplus测试尝试访问从MAXVA开始的一系列地址，通过`a <<= 1`操作不断增加地址值。
+2. 当地址值超过MAXVA时，内核中的walk函数会检测到这个情况，并直接调用panic()终止整个系统。
+3. 这种处理方式过于激进，一个用户进程的错误导致整个系统崩溃，不符合操作系统设计原则。
+
+## 解决方案
+
+修改内核中的walk函数，使其在遇到超过MAXVA的地址时不再直接panic，而是返回0表示无效地址，让调用者处理这种情况。
+
+## 具体修改
+
+### 修改文件：/home/sanm/OS/ZXXOS/riscv/kernel/vm.c
+
+#### 修改前：
+```c
+walk(pagetable_t pagetable, uint64 va, int alloc)
+{
+  if(va >= MAXVA)
+    panic("walk");
+
+  for(int level = 2; level > 0; level--) {
+    pte_t *pte = &pagetable[PX(level, va)];
+    if(*pte & PTE_V) {
+      pagetable = (pagetable_t)PTE2PA(*pte);
+    } else {
+      if(!alloc || (pagetable = (pde_t*)kalloc()) == 0)
+        return 0;
+      memset(pagetable, 0, PGSIZE);
+      *pte = PA2PTE(pagetable) | PTE_V;
+    }
+  }
+  return &pagetable[PX(0, va)];
+}
+```
+
+#### 修改后：
+```c
+walk(pagetable_t pagetable, uint64 va, int alloc)
+{
+  if(va >= MAXVA) {
+    // 不再直接panic，而是返回0表示无效地址
+    // 调用者应该处理这种情况，通常会导致进程被杀死
+    return 0;
+  }
+
+  for(int level = 2; level > 0; level--) {
+    pte_t *pte = &pagetable[PX(level, va)];
+    if(*pte & PTE_V) {
+      pagetable = (pagetable_t)PTE2PA(*pte);
+    } else {
+      if(!alloc || (pagetable = (pde_t*)kalloc()) == 0)
+        return 0;
+      memset(pagetable, 0, PGSIZE);
+      *pte = PA2PTE(pagetable) | PTE_V;
+    }
+  }
+  return &pagetable[PX(0, va)];
+}
+```
+
+## 修改说明
+
+1. 将`panic("walk")`替换为`return 0`，表示无效地址
+2. 添加注释说明修改的原因和预期行为
+3. 保留其他代码不变
+
+## 测试方法
+
+1. 重新编译系统：
+   ```
+   make clean
+   make qemu
+   ```
+
+2. 运行MAXVAplus测试：
+   ```
+   usertests MAXVAplus
+   ```
+
+## 预期结果
+
+修改后，MAXVAplus测试应该能够正常运行，不再出现panic错误。当子进程尝试访问超过MAXVA的地址时：
+
+1. 会触发页面错误
+2. 内核会调用walk函数处理错误
+3. walk函数会检查地址是否超过MAXVA，如果是，返回0而不是panic
+4. 调用walk的代码会检查返回值，如果是0，会杀死进程
+5. 父进程会等待子进程结束，并检查退出状态码
+
+## 影响范围
+
+这个修改会影响所有调用walk函数的代码路径，但主要是影响页面错误处理路径。对于合法的地址访问，行为保持不变；对于超过MAXVA的地址访问，系统不再panic，而是优雅地杀死进程。
+
+## 其他考虑
+
+1. 这种修改提高了系统的健壮性，防止用户进程的错误导致系统崩溃
+2. 保持了原有的安全机制，仍然阻止用户进程访问超过MAXVA的地址
+3. 符合现代操作系统的设计原则，即隔离用户错误，保护系统稳定性
