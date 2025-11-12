@@ -1,34 +1,40 @@
 K=kernel
 U=user
 R=riscv
+L=loongarch
 
+ARCH?=riscv
+A=$(ARCH)
 
 OBJS = \
   $K/entry.o \
-  $K/start.o \
-  $K/console.o \
-  $K/printf.o \
+  $K/main.o \
   $K/uart.o \
-  $K/kalloc.o \
+  $K/printf.o \
+  $K/proc.o \
   $K/spinlock.o \
   $K/string.o \
-  $K/main.o \
-  $K/vm.o \
-  $K/proc.o \
   $K/swtch.o \
-  $K/trampoline.o \
-  $K/trap.o \
-  $K/syscall.o \
-  $K/sysproc.o \
-  $K/bio.o \
-  $K/fs.o \
-  $K/log.o \
+  $K/console.o \
   $K/sleeplock.o \
   $K/file.o \
-  $K/pipe.o \
-  $K/exec.o \
-  $K/sysfile.o \
-  $K/kernelvec.o \
+  $K/kalloc.o\
+  $K/vm.o\
+  $K/trap.o\
+  $K/bio.o\
+  $K/log.o\
+  $K/fs.o\
+  $K/pipe.o\
+  $K/exec.o\
+  $K/syscall.o\
+  $K/sysproc.o\
+  $K/sysfile.o\
+  $K/kernelvec.o
+
+ifeq ($(ARCH),riscv)
+OBJS += \
+  $K/start.o \
+  $K/trampoline.o \
   $K/plic.o \
   $K/virtio_disk.o
 
@@ -86,7 +92,7 @@ CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 &
 CFLAGS += -DNET_TESTS_PORT=$(SERVERPORT)		# LAB_NET
 
 # 为用户程序添加头文件搜索路径
-USER_CFLAGS = $(CFLAGS) -I$R
+USER_CFLAGS = $(CFLAGS) -I$A
 
 # Disable PIE when possible (for Ubuntu 16.10 toolchain)
 ifneq ($(shell $(CC) -dumpspecs 2>/dev/null | grep -e '[^f]no-pie'),)
@@ -98,22 +104,22 @@ endif
 
 LDFLAGS = -z max-page-size=4096
 
-$K/kernel: $(OBJS) $R/$K/kernel.ld
+$K/kernel: $(OBJS) $A/$K/kernel.ld
 	mkdir -p $K
-	$(LD) $(LDFLAGS) -T $R/$K/kernel.ld -o $K/kernel $(OBJS)
+	$(LD) $(LDFLAGS) -T $A/$K/kernel.ld -o $K/kernel $(OBJS)
 	$(OBJDUMP) -S $K/kernel > $K/kernel.asm
 	$(OBJDUMP) -t $K/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $K/kernel.sym
 
 
-$K/%.o: $R/$K/%.S
+$K/%.o: $A/$K/%.S
 	mkdir -p $K
 	$(CC) -march=rv64gc -g -c -o $@ $<
 
-$K/start.o: $R/$K/start.c
+$K/start.o: $A/$K/start.c
 	mkdir -p $K
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$K/%.o: $R/$K/%.c
+$K/%.o: $A/$K/%.c
 	mkdir -p $K
 	$(CC) $(CFLAGS) -c -o $@ $<
 
@@ -125,25 +131,25 @@ ULIB = $U/ulib.o $U/usys.o $U/printf.o $U/umalloc.o
 ULIB += $U/statistics.o
 # endif
 
-$U/ulib.o: $R/$U/ulib.c
+$U/ulib.o: $A/$U/ulib.c
 	mkdir -p $U
 	$(CC) $(USER_CFLAGS) -c -o $@ $<
 
-$U/printf.o: $R/$U/printf.c
+$U/printf.o: $A/$U/printf.c
 	mkdir -p $U
 	$(CC) $(USER_CFLAGS) -c -o $@ $<
 
-$U/umalloc.o: $R/$U/umalloc.c
+$U/umalloc.o: $A/$U/umalloc.c
 	mkdir -p $U
 	$(CC) $(USER_CFLAGS) -c -o $@ $<
 
-$U/_%: $U/%.o $(ULIB) $R/$U/user.ld
-	$(LD) $(LDFLAGS) -T $R/$U/user.ld -o $@ $< $(ULIB)
-	$(OBJDUMP) -S $@ > $*.asm
-	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $*.sym
+$U/_%: $U/%.o $(ULIB) $A/$U/user.ld
+	$(LD) $(LDFLAGS) -T $A/$U/user.ld -o $@ $< $(ULIB)
+	$(OBJDUMP) -S $@ > $U/$*.asm
+	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $U/$*.sym
 
-$U/usys.S : $R/$U/usys.pl
-	perl $R/$U/usys.pl > $U/usys.S
+$U/usys.S : $A/$U/usys.pl
+	perl $A/$U/usys.pl > $U/usys.S
 
 $U/usys.o : $U/usys.S
 	mkdir -p $U
@@ -156,24 +162,24 @@ $U/_forktest: $U/forktest.o $(ULIB)
 	$(OBJDUMP) -S $U/_forktest > $U/forktest.asm
 
 # 修改用户程序编译规则，从 riscv/user/ 找源文件
-$U/%.o: $R/$U/%.c
+$U/%.o: $A/$U/%.c
 	mkdir -p $U
 	$(CC) $(USER_CFLAGS) -c -o $@ $<
 
-$U/%.o: $R/$U/%.S
+$U/%.o: $A/$U/%.S
 	mkdir -p $U
 	$(CC) $(USER_CFLAGS) -c -o $@ $<
 
-mkfs/mkfs: $R/mkfs/mkfs.c $R/$K/fs.h $R/$K/param.h
+mkfs/mkfs: $A/mkfs/mkfs.c $A/$K/fs.h $A/$K/param.h
 	@echo "=== 编译 mkfs 的环境信息 ==="
 	@echo "编译器: $(CC)"
 	@echo "CFLAGS: $(CFLAGS)"
-	@echo "源文件: $R/mkfs/mkfs.c"
+	@echo "源文件: $A/mkfs/mkfs.c"
 	@echo "头文件搜索路径:"
 	@$(CC) -E -Wp,-v -xc /dev/null 2>&1 | grep -E "^ "
 	@echo "=== 开始编译 ==="
 	mkdir -p mkfs
-	gcc -Wno-unknown-attributes -I. -I$R -o mkfs/mkfs $R/mkfs/mkfs.c
+	gcc -Wno-unknown-attributes -I. -I$A -o mkfs/mkfs $A/mkfs/mkfs.c
 
 UPROGS=\
 	$U/_cat\
@@ -255,12 +261,165 @@ check-qemu-version:
 		echo "ERROR: Need qemu version >= $(MIN_QEMU_VERSION)"; \
 		exit 1; \
 	fi
+	
+endif
+
+ifeq ($(ARCH),loongarch)
+
+export CC_PREFIX = /opt/cross-tools
+export PATH := $(CC_PREFIX)/bin:$(PATH)
+export LD_LIBRARY_PATH := $(CC_PREFIX)/lib:$(CC_PREFIX)/loongarch64-unknown-linux-gnu/lib:$(LD_LIBRARY_PATH)
+
+OBJS+=\
+  $K/tlbrefill.o\
+  $K/merror.o\
+  $K/apic.o\
+  $K/extioi.o\
+  $K/ramdisk.o\
+  $K/uservec.o
+  
+UNAME_M=$(shell uname -m)
+ifeq ($(findstring loongarch64,$(UNAME_M)),loongarch64)
+TOOLPREFIX ?= 
+else
+TOOLPREFIX = loongarch64-unknown-linux-gnu-
+endif
+
+CC = $(TOOLPREFIX)gcc
+AS = $(TOOLPREFIX)gas
+LD = $(TOOLPREFIX)ld
+OBJCOPY = $(TOOLPREFIX)objcopy
+OBJDUMP = $(TOOLPREFIX)objdump
+
+ASFLAGS = -march=loongarch64 -mabi=lp64s
+CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb
+CFLAGS += -MD
+CFLAGS += -march=loongarch64 -mabi=lp64s
+CFLAGS += -ffreestanding -fno-common -nostdlib
+CFLAGS += -I. -fno-stack-protector
+CFLAGS += -fno-pie -no-pie
+LDFLAGS = -z max-page-size=4096
+
+$K/kernel: $(OBJS) $A/$K/kernel.ld $U/initcode
+	$(LD) $(LDFLAGS) -T $A/$K/kernel.ld -o $K/kernel $(OBJS)
+	$(OBJDUMP) -S $K/kernel > $K/kernel.asm
+	$(OBJDUMP) -t $K/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $K/kernel.sym
+	
+$K/%.o: $A/$K/%.S
+	$(CC) $(CFLAGS) -g -c -o $@ $<
+
+$K/%.o: $K/%.S
+	$(CC) $(CFLAGS) -g -c -o $@ $<
+	
+$K/%.o: $A/$K/%.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$U/initcode: $A/$U/initcode.S
+	$(CC) $(CFLAGS) -nostdinc -I. -Ikernel -c $A/$U/initcode.S -o $U/initcode.o
+	$(LD) $(LDFLAGS) -N -e start -Ttext 0 -o $U/initcode.out $U/initcode.o
+	$(OBJCOPY) -S -O binary $U/initcode.out $U/initcode
+	$(OBJDUMP) -S $U/initcode.o > $U/initcode.asm
+
+tags: $(OBJS) _init
+	etags *.S *.c
+
+ULIB = $U/ulib.o $U/usys.o $U/printf.o $U/umalloc.o
+
+$U/ulib.o: $A/$U/ulib.c
+	@echo "编译命令: $(CC) $(USER_CFLAGS) -c -o $@ $<"
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$U/printf.o: $A/$U/printf.c  
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$U/umalloc.o: $A/$U/umalloc.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+	
+$U/_%: $U/%.o $(ULIB)
+	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
+	$(OBJDUMP) -S $@ > $U/$*.asm
+	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $U/$*.sym
+
+$U/usys.S : $A/$U/usys.pl
+	@echo "编译命令: $(CC) $(USER_CFLAGS) -c -o $@ $<"
+	perl $A/$U/usys.pl > $U/usys.S
+
+$U/usys.o : $U/usys.S
+	@echo "编译命令: $(CC) $(USER_CFLAGS) -c -o $@ $<"
+	$(CC) $(CFLAGS) -c -o $U/usys.o $U/usys.S
+
+$U/_forktest: $U/forktest.o $(ULIB)
+	# forktest has less library code linked in - needs to be small
+	# in order to be able to max out the proc table.
+	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $U/_forktest $U/forktest.o $U/ulib.o $U/usys.o
+	$(OBJDUMP) -S $U/_forktest > $U/forktest.asm
+
+SH_FLAGS = -O -fno-omit-frame-pointer -ggdb -MD -march=loongarch64 -mabi=lp64s -ffreestanding -fno-common -nostdlib -I. -fno-stack-protector -fno-pie -no-pie -c -o
+
+$U/_sh: $A/$U/sh.c $(ULIB)
+	$(CC) $(SH_FLAGS) $U/sh.o $A/$U/sh.c
+	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $U/_sh $U/sh.o $(ULIB)
+	$(OBJDUMP) -S $U/_sh > $U/sh.asm
+
+mkfs/mkfs: $A/mkfs/mkfs.c $A/$K/fs.h $A/$K/param.h
+	gcc -Werror -Wall -I. -o mkfs/mkfs $A/mkfs/mkfs.c
+
+# Prevent deletion of intermediate files, e.g. cat.o, after first build, so
+# that disk image changes after first build are persistent until clean.  More
+# details:
+# http://www.gnu.org/software/make/manual/html_node/Chained-Rules.html
+.PRECIOUS: %.o
+$U/%.o: $A/$U/%.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$U/%.o: $A/$U/%.S
+	$(CC) $(CFLAGS) -c -o $@ $<
+UPROGS=\
+	$U/_cat\
+	$U/_echo\
+	$U/_forktest\
+	$U/_grep\
+	$U/_init\
+	$U/_kill\
+	$U/_ln\
+	$U/_ls\
+	$U/_mkdir\
+	$U/_rm\
+	$U/_sh\
+	$U/_stressfs\
+	$U/_usertests\
+#	$U/_grind\
+	$U/_wc\
+	$U/_zombie\
+
+fs.img: mkfs/mkfs README $(UPROGS)
+	mkfs/mkfs fs.img README $(UPROGS)
+	xxd -i fs.img > kernel/ramdisk.h
+
+-include kernel/*.d user/*.d
+
+QEMU = qemu-system-loongarch64
+QEMU_OPTS = -kernel kernel/kernel -m 1G -nographic -smp 1
+QEMU_OPTS += -drive file=fs.img,if=none,format=raw,id=x0
+QEMU_OPTS += -device virtio-blk-pci,drive=x0
+QEMU_OPTS += -no-reboot
+QEMU_OPTS += -device virtio-net-pci,netdev=net0
+QEMU_OPTS += -netdev user,id=net0
+QEMU_OPTS += -rtc base=utc
+
+all: fs.img $K/kernel 
+
+qemu: all
+	$(QEMU) $(QEMU_OPTS)
+	
+endif
 
 clean:
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
 		*.asm *.sym *.d packets.pcap \
 		$K/*.o $K/*.d $K/*.asm $K/*.sym \
-		$U/*.o $U/*.d $U/*.asm $U/*.sym \
+		$U/*.o $U/*.d $U/*.asm $U/*.sym $U/_* \
+		$K/ramdisk.h $U/initcode $U/initcode.out \
 		$K/kernel fs.img \
 		mkfs/mkfs .gdbinit \
 		$U/usys.S \
@@ -268,4 +427,12 @@ clean:
 		$R/$K/*.o $R/$K/*.d $R/$K/*.asm $R/$K/*.sym \
 		$R/$U/*.o $R/$U/*.d $R/$U/*.asm $R/$U/*.sym \
 		$R/$K/kernel $R/$U/usys.S \
-		$R/mkfs/mkfs
+		$R/mkfs/mkfs \
+		$K/*.o $K/*.d $K/*.asm $K/*.sym \
+		$U/*.o $U/*.d $U/*.asm $U/*.sym \
+		$L/$K/kernel-back fs.img \
+		mkfs/mkfs .gdbinit \
+		$L/$K/*.o $L/$K/*.d $L/$K/*.asm $L/$K/*.sym \
+		$L/$U/*.o $L/$U/*.d $L/$U/*.asm $L/$U/*.sym \
+		$L/$K/kernel $L/$U/usys.S
+
