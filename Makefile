@@ -108,9 +108,9 @@ CFLAGS += -fno-builtin-strchr -fno-builtin-exit -fno-builtin-malloc -fno-builtin
 CFLAGS += -fno-builtin-free
 CFLAGS += -fno-builtin-memcpy -Wno-main
 CFLAGS += -fno-builtin-printf -fno-builtin-fprintf -fno-builtin-vprintf
-CFLAGS += -I. -I$A
+CFLAGS += -I. -I$A -I$A/$K
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
-
+CFLAGS += -Driscv
 CFLAGS += -DNET_TESTS_PORT=$(SERVERPORT)		# LAB_NET
 
 # Disable PIE when possible (for Ubuntu 16.10 toolchain)
@@ -130,8 +130,9 @@ CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb
 CFLAGS += -MD
 CFLAGS += -march=loongarch64 -mabi=lp64s
 CFLAGS += -ffreestanding -fno-common -nostdlib
-CFLAGS += -I. -fno-stack-protector
+CFLAGS += -I. -I$A/$K -fno-stack-protector
 CFLAGS += -fno-pie -no-pie
+CFLAGS += -Dloongarch
 
 endif
 
@@ -153,16 +154,16 @@ $K/kernel: $(KERNEL_DEPS)
 	$(LD) $(LDFLAGS) -T $A/$K/kernel.ld -o $K/kernel $(OBJS)
 	$(OBJDUMP) -S $K/kernel > $K/kernel.asm
 	$(OBJDUMP) -t $K/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $K/kernel.sym
-ifeq ($(ARCH),loongarch)
+
 $K/%.o: $A/$K/%.S
 	$(CC) $(CFLAGS) -g -c -o $@ $<
-endif
-ifeq ($(ARCH),riscv)
-$K/%.o: $A/$K/%.S
-	$(CC) -march=rv64gc -g -c -o $@ $<
-endif
+
 $K/%.o: $A/$K/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
+
+$K/%.o: $K/%.c
+	$(CC) $(CFLAGS) -g -c -o $@ $<
+
 ifeq ($(ARCH),riscv)
 $K/start.o: $A/$K/start.c
 	$(CC) $(CFLAGS) -c -o $@ $<
