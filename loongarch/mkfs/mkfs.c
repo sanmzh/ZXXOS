@@ -9,7 +9,7 @@
 #include "loongarch/kernel/types.h"
 #include "loongarch/kernel/fs.h"
 #include "loongarch/kernel/stat.h"
-#include "loongarch/kernel/param.h"
+#include "kernel/param.h"
 
 #ifndef static_assert
 #define static_assert(a, b) do { switch (0) case 0: case (a): ; } while (0)
@@ -22,7 +22,7 @@
 
 int nbitmap = FSSIZE/(BSIZE*8) + 1;
 int ninodeblocks = NINODES / IPB + 1;
-int nlog = LOGSIZE;
+int nlog = MYLOGBLOCKS;
 int nmeta;    // Number of meta blocks (boot, sb, nlog, inode, bitmap)
 int nblocks;  // Number of data blocks
 

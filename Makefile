@@ -2,7 +2,7 @@ K=kernel
 U=user
 R=riscv
 L=loongarch
-
+I=include
 ARCH?=riscv
 A=$(ARCH)
 
@@ -108,7 +108,7 @@ CFLAGS += -fno-builtin-strchr -fno-builtin-exit -fno-builtin-malloc -fno-builtin
 CFLAGS += -fno-builtin-free
 CFLAGS += -fno-builtin-memcpy -Wno-main
 CFLAGS += -fno-builtin-printf -fno-builtin-fprintf -fno-builtin-vprintf
-CFLAGS += -I. -I$A -I$A/$K
+CFLAGS += -I. -I$A -I$A/$K -I$I -I$K
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 CFLAGS += -Driscv
 CFLAGS += -DNET_TESTS_PORT=$(SERVERPORT)		# LAB_NET
@@ -130,7 +130,7 @@ CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb
 CFLAGS += -MD
 CFLAGS += -march=loongarch64 -mabi=lp64s
 CFLAGS += -ffreestanding -fno-common -nostdlib
-CFLAGS += -I. -I$A/$K -fno-stack-protector
+CFLAGS += -I. -I$A/$K -I$I -I$K -fno-stack-protector
 CFLAGS += -fno-pie -no-pie
 CFLAGS += -Dloongarch
 
@@ -222,11 +222,11 @@ $U/%.o: $A/$U/%.S
 
 ifeq ($(ARCH),riscv)
 # 修改用户程序编译规则，从 riscv/user/ 找源文件
-mkfs/mkfs: $A/mkfs/mkfs.c $A/$K/fs.h $A/$K/param.h
+mkfs/mkfs: $A/mkfs/mkfs.c $A/$K/fs.h $K/param.h
 	gcc -Wno-unknown-attributes -I. -I$A -o mkfs/mkfs $A/mkfs/mkfs.c
 endif
 ifeq ($(ARCH),loongarch)
-mkfs/mkfs: $A/mkfs/mkfs.c $A/$K/fs.h $A/$K/param.h
+mkfs/mkfs: $A/mkfs/mkfs.c $A/$K/fs.h $K/param.h
 	gcc -Werror -Wall -I. -o mkfs/mkfs $A/mkfs/mkfs.c
 endif
 UPROGS=\
@@ -361,8 +361,13 @@ clean:
 		mkfs/mkfs .gdbinit \
 		$U/usys.S \
 		$(UPROGS) \
-		$A/$K/*.o $A/$K/*.d $A/$K/*.asm $A/$K/*.sym \
-		$A/$U/*.o $A/$U/*.d $A/$U/*.asm $A/$U/*.sym \
-		$A/$K/kernel $A/$U/usys.S \
-		$A/mkfs/mkfs \
+		$R/$K/*.o $R/$K/*.d $R/$K/*.asm $R/$K/*.sym $R/$K/tags \
+		$R/$U/*.o $R/$U/*.d $R/$U/*.asm $R/$U/*.sym \
+		$R/$K/kernel $R/$U/usys.S \
+		$R/mkfs/mkfs \
+		$L/$K/kernel-back fs.img \
+		$L/$K/*.o $L/$K/*.d $L/$K/*.Lsm $L/$K/*.sym $A/$K/tags \
+		$L/$U/*.o $L/$U/*.d $L/$U/*.asm $L/$U/*.sym \
+		$L/$K/kernel $L/$U/usys.S \
+		$L/mkfs/mkfs \
 		$L/$K/kernel-back fs.img \
