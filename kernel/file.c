@@ -1,7 +1,14 @@
+//
 // Support functions for system calls that involve file descriptors.
+//
 
 #include "types.h"
+#ifdef loongarch
 #include "loongarch.h"
+#endif
+#ifdef riscv
+#include "riscv.h"
+#endif
 #include "defs.h"
 #include "param.h"
 #include "fs.h"
@@ -102,7 +109,7 @@ filestat(struct file *f, uint64 addr)
 // Read from file f.
 // addr is a user virtual address.
 int
-fileread(struct file *f, uint64 addr, int n)//todo
+fileread(struct file *f, uint64 addr, int n)
 {
   int r = 0;
 
@@ -148,8 +155,6 @@ filewrite(struct file *f, uint64 addr, int n)
     // the maximum log transaction size, including
     // i-node, indirect block, allocation blocks,
     // and 2 blocks of slop for non-aligned writes.
-    // this really belongs lower down, since writei()
-    // might be writing a device like the console.
     int max = ((MAXOPBLOCKS-1-1-2) / 2) * BSIZE;
     int i = 0;
     while(i < n){
@@ -177,3 +182,4 @@ filewrite(struct file *f, uint64 addr, int n)
 
   return ret;
 }
+
