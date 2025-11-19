@@ -57,6 +57,8 @@ char* sbrklazy(int);
 // #ifdef LAB_LOCK
 int statistics(void*, int);
 // #endif
+void *mmap(void *addr, int length, int prot, int flags, int fd, int offset);
+int munmap(void *addr, int length);
 
 // printf.c
 void fprintf(int, const char*, ...) __attribute__ ((format (printf, 2, 3)));
