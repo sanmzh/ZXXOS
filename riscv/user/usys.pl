@@ -56,3 +56,6 @@ entry("recv");
 # lock
 entry("rwlktest");
 entry("cpupin");
+
+entry("mmap");
+entry("munmap");

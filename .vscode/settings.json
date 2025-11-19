@@ -3,7 +3,11 @@
 		"*.cpp": "cpp",
 		"user.h": "c",
 		"riscv.h": "c",
-		"defs.h": "c"
+		"defs.h": "c",
+		"syscall.h": "c",
+		"sysnum.h": "c",
+		"spinlock.h": "c",
+		"sleeplock.h": "c"
 	},
 	"Codegeex.RepoIndex": true
 }

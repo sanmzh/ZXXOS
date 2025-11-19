@@ -3,8 +3,12 @@
 #include "memlayout.h"
 #include "riscv.h"
 #include "spinlock.h"
+#include "sleeplock.h"
 #include "proc.h"
+#include "fs.h"
+#include "file.h"
 #include "defs.h"
+#include "fcntl.h"
 
 struct spinlock tickslock;
 uint ticks;
@@ -88,7 +92,14 @@ usertrap(void)
       }
     }
     
-    // 如果不是COW页面或者COW处理失败，尝试懒分配
+    // 如果不是COW页面或者COW处理失败，检查是否是mmap区域
+    int mmap_result = mmap_handler(va, cause);
+    if(mmap_result == 0) {
+      // mmap处理成功
+      goto done;
+    }
+
+    // 如果不是mmap区域或者mmap处理失败，尝试懒分配
     uint64 vmfault_result = vmfault(p->pagetable, va, (cause == 13)? 1 : 0);
     
     if(vmfault_result != 0) {
@@ -264,3 +275,70 @@ devintr()
   }
 }
 
+/**
+ * @brief mmap_handler 处理mmap惰性分配导致的页面错误
+ * @param va 页面故障虚拟地址
+ * @param cause 页面故障原因
+ * @return 0成功，-1失败
+ */
+int mmap_handler(int va, int cause)
+{
+  int i;
+  struct proc *p = myproc();
+  // 根据地址查找属于哪一个VMA
+  for (i = 0; i < NVMA; ++i)
+  {
+    if (p->vma[i].used && p->vma[i].addr <= va && va <= p->vma[i].addr + p->vma[i].len - 1)
+    {
+      break;
+    }
+  }
+  if (i == NVMA)
+    return -1;
+
+  int pte_flags = PTE_U;
+  if (p->vma[i].prot & PROT_READ)
+    pte_flags |= PTE_R;
+  if (p->vma[i].prot & PROT_WRITE)
+    pte_flags |= PTE_W;
+  if (p->vma[i].prot & PROT_EXEC)
+    pte_flags |= PTE_X;
+
+  struct file *vf = p->vma[i].vfile;
+  // 读导致的页面错误
+  if (cause == 13 && vf->readable == 0)
+    return -1;
+  // 写导致的页面错误
+  if (cause == 15 && vf->writable == 0)
+    return -1;
+
+  void *pa = kalloc();
+  if (pa == 0)
+    return -1;
+  memset(pa, 0, PGSIZE);
+
+  // 读取文件内容
+  ilock(vf->ip);
+  // 计算当前页面读取文件的偏移量，实验中p->vma[i].offset总是0
+  // 要按顺序读读取，例如内存页面A,B和文件块a,b
+  // 则A读取a，B读取b，而不能A读取b，B读取a
+  int offset = p->vma[i].offset + PGROUNDDOWN(va - p->vma[i].addr);
+  int readbytes = readi(vf->ip, 0, (uint64)pa, offset, PGSIZE);
+  // 如果读到0字节，可能是文件末尾，这是正常情况
+  // 不应该返回错误，而是继续使用已分配的页面（已清零）
+  if (readbytes == 0)
+  {
+    iunlock(vf->ip);
+    // 继续使用已分配的页面（已清零）
+  }
+  iunlock(vf->ip);
+
+  // 添加页面映射
+  if (mappages(p->pagetable, PGROUNDDOWN(va), PGSIZE, (uint64)pa, pte_flags) != 0)
+  {
+    kfree(pa);
+    return -1;
+  }
+
+  return 0;
+}

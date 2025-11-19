@@ -260,6 +260,7 @@ UPROGS += $U/_grind\
 	$U/_nettest\
 	$U/_kalloctest\
 	$U/_rwlktest\
+	$U/_mmaptest\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
