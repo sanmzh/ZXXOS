@@ -11,7 +11,12 @@
 #include "fs.h"
 #include "file.h"
 #include "memlayout.h"
+#ifdef loongarch
+#include "loongarch.h"
+#endif
+#ifdef riscv
 #include "riscv.h"
+#endif
 #include "defs.h"
 #include "proc.h"
 
@@ -24,7 +29,6 @@ static struct {
 } pr;
 
 static char digits[] = "0123456789abcdef";
-
 static void
 printint(long long xx, int base, int sign)
 {
@@ -67,6 +71,11 @@ printf(char *fmt, ...)
   int i, cx, c0, c1, c2;
   char *s;
 
+  #ifdef loongarch
+  if (fmt == 0)
+    panic("null fmt");
+  #endif
+  
   if(panicking == 0)
     acquire(&pr.lock);
 
@@ -140,7 +149,9 @@ panic(char *s)
   printf("panic: ");
   printf("%s\n", s);
   // 打印调用栈轨迹
+  #ifdef riscv
   backtrace();
+  #endif
   panicked = 1; // freeze uart output from other CPUs
   for(;;)
     ;
@@ -151,7 +162,7 @@ printfinit(void)
 {
   initlock(&pr.lock, "pr");
 }
-
+#ifdef riscv
 // 打印调用栈轨迹
 void
 backtrace(void)
@@ -171,3 +182,4 @@ backtrace(void)
     fp = *(uint64*)(fp - 16);
   }
 }
+#endif

@@ -15,7 +15,7 @@ void            consoleintr(int);
 void            consputc(int);
 
 // printf.c
-void            printf(char*, ...);
+int            printf(char*, ...);
 void            panic(char*) __attribute__((noreturn));
 void            printfinit(void);
 
