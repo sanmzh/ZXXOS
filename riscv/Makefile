@@ -42,6 +42,11 @@ OBJS += \
 	$K/sprintf.o
 # endif
 
+# 共享内存
+OBJS += \
+	$K/shm.o\
+	$K/sysshm.o
+
 # riscv64-unknown-elf- or riscv64-linux-gnu-
 # perhaps in /opt/riscv/bin
 #TOOLPREFIX = 
@@ -168,6 +173,7 @@ UPROGS=\
 	$U/_nettest\
 	$U/_kalloctest\
 	$U/_rwlktest\
+	$U/_shmtest\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)

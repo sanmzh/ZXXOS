@@ -76,4 +76,10 @@
 #define SYS_rwlktest  535
 #define SYS_cpupin    536
 
+// 共享内存相关系统调用
+#define SYS_shmget    537
+#define SYS_shmat     538
+#define SYS_shmdt     539
+#define SYS_shmctl    540
+
 #endif // _SYS_H
