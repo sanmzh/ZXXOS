@@ -41,6 +41,7 @@ entry("dup");
 entry("getpid");
 entry("sbrk");
 entry("pause");
+entry("sleep");
 entry("uptime");
 
 entry("trace");     # 用户态下的程序通过调用trace函数来使用跟踪系统调用功能

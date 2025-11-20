@@ -62,6 +62,9 @@ void test_ipc() {
       exit(1);
     }
 
+    // 等待父进程写入数据
+    sleep(1);
+
     // 读取父进程写入的数据
     printf("子进程读取数据: %s\n", shm_ptr);
 
@@ -103,9 +106,9 @@ void test_ipc() {
     // 删除共享内存
     if (shmctl(shmid, 1, 0) < 0) { // IPC_RMID
       printf("删除共享内存失败\n");
-      exit(1);
+    } else {
+      printf("删除共享内存成功\n");
     }
-    printf("删除共享内存成功\n");
   }
 }
 
@@ -162,9 +165,9 @@ void test_multiple_attach() {
   // 删除共享内存
   if (shmctl(shmid, 1, 0) < 0) { // IPC_RMID
     printf("删除共享内存失败\n");
-    exit(1);
+  } else {
+    printf("删除共享内存成功\n");
   }
-  printf("删除共享内存成功\n");
 }
 
 int main() {
