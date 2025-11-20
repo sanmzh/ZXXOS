@@ -42,7 +42,9 @@ OBJS += \
   $K/pci.o \
   $K/stats.o \
   $K/sprintf.o \
-  $K/kernelvec.o
+  $K/kernelvec.o \
+  $K/shm.o \
+  $K/sysshm.o
 endif
 
 ifeq ($(ARCH),loongarch)
@@ -261,6 +263,8 @@ UPROGS += $U/_grind\
 	$U/_kalloctest\
 	$U/_rwlktest\
 	$U/_mmaptest\
+	$U/_shmtest\
+
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)

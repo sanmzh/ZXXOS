@@ -59,3 +59,9 @@ entry("cpupin");
 
 entry("mmap");
 entry("munmap");
+
+# 共享内存系统调用
+entry("shmget");
+entry("shmat");
+entry("shmdt");
+entry("shmctl");
