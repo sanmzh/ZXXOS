@@ -9,6 +9,19 @@ __attribute__ ((aligned (16))) char stack0[4096 * NCPU];
 
 volatile static int started = 0;
 
+void
+printlogo()
+{
+  printf("\n");
+  printf("███████╗ ██╗  ██╗ ██╗  ██╗  ██████╗  ███████╗\n");
+  printf("╚══███╔╝ ╚██╗██╔╝ ╚██╗██╔╝ ██╔═══██╗ ██╔════╝\n");
+  printf("  ███╔╝   ╚███╔╝   ╚███╔╝  ██║   ██║ ███████╗\n");
+  printf(" ███╔╝    ██╔██╗   ██╔██╗  ██║   ██║ ╚════██║\n");
+  printf("███████╗ ██╔╝ ██╗ ██╔╝ ██╗ ╚██████╔╝ ███████║\n");
+  printf("╚══════╝ ╚═╝  ╚═╝ ╚═╝  ╚═╝  ╚═════╝  ╚══════╝\n");
+  printf("\n");
+}
+
 // entry.S jumps here on stack0.
 void
 main()
@@ -16,7 +29,7 @@ main()
    if(cpuid() == 0){
     consoleinit();
     printfinit();
-    
+    printlogo();
     kinit();         // physical page allocator
 //printf("kinit\n");
     vminit();        // create kernel page table

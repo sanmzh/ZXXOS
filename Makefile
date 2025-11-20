@@ -6,6 +6,14 @@ I=include
 ARCH?=riscv
 A=$(ARCH)
 
+# 定义目录
+USER_DIR = user
+MKFS_DIR = mkfs
+DIRS = $(USER_DIR) $(MKFS_DIR)
+
+# 在Makefile解析时自动创建目录
+$(shell mkdir -p $(DIRS))
+
 OBJS = \
   $K/entry.o \
   $K/main.o \
