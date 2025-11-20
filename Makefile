@@ -132,12 +132,13 @@ CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb
 CFLAGS += -MD
 CFLAGS += -march=loongarch64 -mabi=lp64s
 CFLAGS += -ffreestanding -fno-common -nostdlib
-CFLAGS += -I. -I$A/$K -I$I -I$K -fno-stack-protector
+CFLAGS += -I. -I$A/$K -I$I -I$K -I$A -fno-stack-protector
 CFLAGS += -fno-pie -no-pie
 CFLAGS += -Dloongarch
 
 endif
 
+CFLAGS += -I$I/$K
 LDFLAGS = -z max-page-size=4096
 
 KERNEL_DEPS = $(OBJS) $A/$K/kernel.ld
@@ -224,12 +225,12 @@ $U/%.o: $A/$U/%.S
 
 ifeq ($(ARCH),riscv)
 # 修改用户程序编译规则，从 riscv/user/ 找源文件
-mkfs/mkfs: $A/mkfs/mkfs.c $A/$K/fs.h $K/param.h
-	gcc -Wno-unknown-attributes -I. -I$A -o mkfs/mkfs $A/mkfs/mkfs.c
+mkfs/mkfs: $A/mkfs/mkfs.c $I/$K/fs.h $K/param.h
+	gcc -Wno-unknown-attributes -I. -I$I -Driscv -o mkfs/mkfs $A/mkfs/mkfs.c
 endif
 ifeq ($(ARCH),loongarch)
-mkfs/mkfs: $A/mkfs/mkfs.c $A/$K/fs.h $K/param.h
-	gcc -Werror -Wall -I. -o mkfs/mkfs $A/mkfs/mkfs.c
+mkfs/mkfs: $A/mkfs/mkfs.c $I/$K/fs.h $K/param.h
+	gcc -Werror -Wall -I. -I$I -Dloongarch -o mkfs/mkfs $A/mkfs/mkfs.c
 endif
 UPROGS=\
 	$U/_cat\
@@ -321,7 +322,7 @@ check-qemu-version:
 endif
 
 ifeq ($(ARCH),loongarch)
-SH_FLAGS = -O -fno-omit-frame-pointer -ggdb -MD -march=loongarch64 -mabi=lp64s -ffreestanding -fno-common -nostdlib -I. -fno-stack-protector -fno-pie -no-pie -c -o
+SH_FLAGS = -O -fno-omit-frame-pointer -ggdb -MD -march=loongarch64 -mabi=lp64s -ffreestanding -fno-common -nostdlib -I. -I$I -fno-stack-protector -fno-pie -no-pie -c -o
 
 $U/_sh: $A/$U/sh.c $(ULIB)
 	$(CC) $(SH_FLAGS) $U/sh.o $A/$U/sh.c

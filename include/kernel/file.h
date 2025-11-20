@@ -38,4 +38,6 @@ struct devsw {
 extern struct devsw devsw[];
 
 #define CONSOLE 1
+#ifdef riscv
 #define STATS   2
+#endif

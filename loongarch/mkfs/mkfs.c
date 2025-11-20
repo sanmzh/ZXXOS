@@ -6,9 +6,9 @@
 #include <assert.h>
 
 #define stat xv6_stat  // avoid clash with host struct stat
-#include "loongarch/kernel/types.h"
-#include "loongarch/kernel/fs.h"
-#include "loongarch/kernel/stat.h"
+#include "kernel/types.h"
+#include "kernel/fs.h"
+#include "kernel/stat.h"
 #include "kernel/param.h"
 
 #ifndef static_assert
