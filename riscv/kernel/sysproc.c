@@ -91,6 +91,30 @@ sys_pause(void)
   return 0;
 }
 
+uint64
+sys_sleep(void)
+{
+  int n;
+  uint ticks0;
+
+  argint(0, &n);
+  if(n < 0)
+    n = 0;
+  acquire(&tickslock);
+  ticks0 = ticks;
+  // 将秒转换为时钟节拍数，假设每秒100个节拍
+  n = n * 100;
+  while(ticks - ticks0 < n){
+    if(killed(myproc())){
+      release(&tickslock);
+      return -1;
+    }
+    sleep(&ticks, &tickslock);
+  }
+  release(&tickslock);
+  return 0;
+}
+
 int
 sys_kpgtbl(void)          // LAB_PGTBL
 {

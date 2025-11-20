@@ -275,12 +275,13 @@ shmctl(int shmid, int cmd, void *buf)
         // 如果没有进程附加，立即删除
         kfree((void*)region->pa);
         region->used = 0;
+        release(&region->lock);
+        return 0;
       } else {
-        // 标记为删除，当引用计数为0时删除
-        // 这里简化处理，实际应该添加标记
+        // 有进程附加，不能删除
+        release(&region->lock);
+        return -1;
       }
-      release(&region->lock);
-      return 0;
 
     default:
       return -1;
