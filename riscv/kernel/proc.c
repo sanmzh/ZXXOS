@@ -6,6 +6,7 @@
 #include "proc.h"
 #include "defs.h"
 #include "fcntl.h"
+#include "syscall.h"  // 添加共享内存系统调用声明
 
 struct cpu cpus[NCPU];
 
@@ -373,6 +374,14 @@ kexit(int status)
       fileclose(p->vma[i].vfile);
       uvmunmap(p->pagetable, p->vma[i].addr, p->vma[i].len / PGSIZE, 1);
       p->vma[i].used = 0;
+    }
+  }
+  
+  // 清理共享内存附加
+  for (int i = 0; i < MAX_SHM_ATTACH; ++i) {
+    if (p->shm_attached[i].used) {
+      // 调用 shmdt 分离共享内存
+      shmdt((void*)p->shm_attached[i].va);
     }
   }
 
