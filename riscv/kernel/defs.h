@@ -231,3 +231,10 @@ void            statsinc(void);
 // sprintf.c
 int             snprintf(char*, unsigned long, const char*, ...);
 // END LAB_LOCK
+
+// shm.c
+void            shm_init(void);
+int             shmget(int key, int size, int shmflg);
+void*           shmat(int shmid, const void *addr, int shmflg);
+int             shmdt(const void *addr);
+int             shmctl(int shmid, int cmd, void *buf);

@@ -95,6 +95,21 @@ struct vm_area
   int offset;         // 文件偏移，本实验中一直为0
 };
 
+// 共享内存区域结构体
+#define SHM_NAME_LEN 32
+#define MAX_SHM_REGIONS 16
+struct shm_region {
+  int used;                     // 是否已被使用
+  int shmid;                    // 共享内存标识符
+  int key;                      // 共享内存键值
+  int size;                     // 共享内存大小（字节）
+  int refcnt;                   // 引用计数
+  uint64 pa;                    // 物理地址
+  char name[SHM_NAME_LEN];      // 共享内存名称
+  struct spinlock lock;         // 自旋锁
+  int marked_for_deletion;      // 标记是否等待删除
+};
+
 // Per-process state
 struct proc {
   struct spinlock lock;
@@ -122,6 +137,13 @@ struct proc {
   uint64 trace_mask;        //存储进程的系统调用跟踪掩码,用于控制哪些系统调用需要被跟踪
   struct vm_area vma[NVMA]; // 虚拟内存区域
 
+  // 共享内存附加区域
+  #define MAX_SHM_ATTACH 16
+  struct shm_attached {
+    int used;          // 是否已被使用
+    int shmid;         // 共享内存标识符
+    uint64 va;         // 虚拟地址
+  } shm_attached[MAX_SHM_ATTACH];
 
 // LAB_LOCK
   struct cpu *pincpu;

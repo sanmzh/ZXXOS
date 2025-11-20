@@ -24,6 +24,7 @@ int dup(int);
 int getpid(void);
 char* sys_sbrk(int,int);
 int pause(int);
+int sleep(int);
 int uptime(void);
 
 int trace(int);         // 用户态程序可以找到trace系统调用的跳板入口函数
@@ -59,6 +60,12 @@ int statistics(void*, int);
 // #endif
 void *mmap(void *addr, int length, int prot, int flags, int fd, int offset);
 int munmap(void *addr, int length);
+
+// 共享内存相关系统调用
+int shmget(int key, int size, int shmflg);
+void *shmat(int shmid, const void *addr, int shmflg);
+int shmdt(const void *addr);
+int shmctl(int shmid, int cmd, void *buf);
 
 // printf.c
 void fprintf(int, const char*, ...) __attribute__ ((format (printf, 2, 3)));
