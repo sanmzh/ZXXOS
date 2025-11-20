@@ -1,7 +1,12 @@
 // Sleeping locks
 
 #include "types.h"
+#ifdef loongarch
+#include "loongarch.h"
+#endif
+#ifdef riscv
 #include "riscv.h"
+#endif
 #include "defs.h"
 #include "param.h"
 #include "memlayout.h"

@@ -1,7 +1,12 @@
 #include "types.h"
 #include "param.h"
 #include "memlayout.h"
+#ifdef loongarch
+#include "loongarch.h"
+#endif
+#ifdef riscv
 #include "riscv.h"
+#endif
 #include "spinlock.h"
 #include "proc.h"
 #include "syscall.h"
@@ -25,13 +30,26 @@ int
 fetchstr(uint64 addr, char *buf, int max)
 {
   struct proc *p = myproc();
+  int err = copyinstr(p->pagetable, buf, addr, max);
+  if(err < 0)
+    return err;
+  return strlen(buf);
+}
+
+//riscv origin
+/*
+int
+fetchstr(uint64 addr, char *buf, int max)
+{
+  struct proc *p = myproc();
   if(copyinstr(p->pagetable, buf, addr, max) < 0)
     return -1;
   return strlen(buf);
 }
+*/
 
 static uint64
-argraw(int n)
+argraw(int n)//todo
 {
   struct proc *p = myproc();
   switch (n) {
@@ -53,19 +71,21 @@ argraw(int n)
 }
 
 // Fetch the nth 32-bit system call argument.
-void
+int
 argint(int n, int *ip)
 {
   *ip = argraw(n);
+  return 0;
 }
 
 // Retrieve an argument as a pointer.
 // Doesn't check for legality, since
 // copyin/copyout will do that.
-void
+int
 argaddr(int n, uint64 *ip)
 {
   *ip = argraw(n);
+  return 0;
 }
 
 // Fetch the nth word-sized system call argument as a null-terminated string.
@@ -75,7 +95,8 @@ int
 argstr(int n, char *buf, int max)
 {
   uint64 addr;
-  argaddr(n, &addr);
+  if(argaddr(n, &addr) < 0)
+    return -1;
   return fetchstr(addr, buf, max);
 }
 
@@ -92,7 +113,6 @@ extern uint64 sys_chdir(void);
 extern uint64 sys_dup(void);
 extern uint64 sys_getpid(void);
 extern uint64 sys_sbrk(void);
-extern uint64 sys_pause(void);
 extern uint64 sys_uptime(void);
 extern uint64 sys_open(void);
 extern uint64 sys_write(void);
@@ -101,6 +121,9 @@ extern uint64 sys_unlink(void);
 extern uint64 sys_link(void);
 extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
+
+#ifdef riscv
+extern uint64 sys_pause(void);
 
 extern uint64 sys_trace(void);
 extern uint64 sys_sysinfo(void);
@@ -120,6 +143,12 @@ extern uint64 sys_cpupin(void);
 extern uint64 sys_mmap(void);
 extern uint64 sys_munmap(void);
 
+#endif
+
+#ifdef loongarch
+extern uint64 sys_sleep(void);
+#endif
+
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
 static uint64 (*syscalls[])(void) = {
@@ -135,7 +164,6 @@ static uint64 (*syscalls[])(void) = {
 [SYS_dup]     sys_dup,
 [SYS_getpid]  sys_getpid,
 [SYS_sbrk]    sys_sbrk,
-[SYS_pause]   sys_pause,
 [SYS_uptime]  sys_uptime,
 [SYS_open]    sys_open,
 [SYS_write]   sys_write,
@@ -144,7 +172,8 @@ static uint64 (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
-
+#ifdef riscv
+[SYS_pause]   sys_pause,
 [SYS_trace]   sys_trace,
 [SYS_sysinfo] sys_sysinfo,
 
@@ -164,8 +193,13 @@ static uint64 (*syscalls[])(void) = {
 [SYS_mmap] sys_mmap,
 [SYS_munmap] sys_munmap,
 
-};
+#endif
+#ifdef loongarch
+[SYS_sleep]   sys_sleep,
+#endif
 
+};
+#ifdef riscv
 //定义系统调用名称的字符串数组
 const char* syscall_names[] = {
 [SYS_fork]    "fork",
@@ -180,7 +214,6 @@ const char* syscall_names[] = {
 [SYS_dup]     "dup",
 [SYS_getpid]  "getpid",
 [SYS_sbrk]    "sbrk",
-[SYS_pause]   "pause",
 [SYS_uptime]  "uptime",
 [SYS_open]    "open",
 [SYS_write]   "write",
@@ -189,10 +222,14 @@ const char* syscall_names[] = {
 [SYS_link]    "link",
 [SYS_mkdir]   "mkdir",
 [SYS_close]   "close",
+[SYS_pause]   "pause",
 
 [SYS_trace]   "trace",
 [SYS_sysinfo] "sysinfo",
+
+
 };
+#endif
 
 void
 syscall(void)
@@ -205,10 +242,11 @@ syscall(void)
     // Use num to lookup the system call function for num, call it,
     // and store its return value in p->trapframe->a0
     p->trapframe->a0 = syscalls[num]();
-
+    #ifdef riscv
     if((p->trace_mask >> num) & 1) {      // 如果当前进程设置了对该编号系统调用的 trace
       printf("%d: syscall %s -> %ld\n", p->pid, syscall_names[num], p->trapframe->a0);
     }
+    #endif
   } else {
     printf("%d %s: unknown sys call %d\n",
             p->pid, p->name, num);
