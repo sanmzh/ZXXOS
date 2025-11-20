@@ -107,6 +107,7 @@ struct shm_region {
   uint64 pa;                    // 物理地址
   char name[SHM_NAME_LEN];      // 共享内存名称
   struct spinlock lock;         // 自旋锁
+  int marked_for_deletion;      // 标记是否等待删除
 };
 
 // Per-process state
