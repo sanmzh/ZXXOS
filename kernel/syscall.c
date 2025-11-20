@@ -113,7 +113,6 @@ extern uint64 sys_chdir(void);
 extern uint64 sys_dup(void);
 extern uint64 sys_getpid(void);
 extern uint64 sys_sbrk(void);
-extern uint64 sys_pause(void);
 extern uint64 sys_sleep(void);
 extern uint64 sys_uptime(void);
 extern uint64 sys_open(void);
@@ -145,16 +144,17 @@ extern uint64 sys_cpupin(void);
 extern uint64 sys_mmap(void);
 extern uint64 sys_munmap(void);
 
-#endif
-
-#ifdef loongarch
-extern uint64 sys_sleep(void);
-#endif
 // 共享内存系统调用
 extern uint64 sys_shmget(void);
 extern uint64 sys_shmat(void);
 extern uint64 sys_shmdt(void);
 extern uint64 sys_shmctl(void);
+#endif
+
+#ifdef loongarch
+extern uint64 sys_sleep(void);
+#endif
+
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -171,7 +171,6 @@ static uint64 (*syscalls[])(void) = {
 [SYS_dup]     sys_dup,
 [SYS_getpid]  sys_getpid,
 [SYS_sbrk]    sys_sbrk,
-[SYS_pause]   sys_pause,
 [SYS_sleep]   sys_sleep,
 [SYS_uptime]  sys_uptime,
 [SYS_open]    sys_open,
@@ -202,15 +201,16 @@ static uint64 (*syscalls[])(void) = {
 [SYS_mmap] sys_mmap,
 [SYS_munmap] sys_munmap,
 
-#endif
-#ifdef loongarch
-[SYS_sleep]   sys_sleep,
-#endif
 // 共享内存系统调用
 [SYS_shmget] sys_shmget,
 [SYS_shmat] sys_shmat,
 [SYS_shmdt] sys_shmdt,
 [SYS_shmctl] sys_shmctl,
+#endif
+#ifdef loongarch
+[SYS_sleep]   sys_sleep,
+#endif
+
 
 };
 
@@ -229,7 +229,6 @@ const char* syscall_names[] = {
 [SYS_dup]     "dup",
 [SYS_getpid]  "getpid",
 [SYS_sbrk]    "sbrk",
-[SYS_pause]   "pause",
 [SYS_sleep]   "sleep",
 [SYS_uptime]  "uptime",
 [SYS_open]    "open",

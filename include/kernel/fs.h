@@ -53,8 +53,16 @@ struct dinode {
 // Directory is a file containing a sequence of dirent structures.
 #define DIRSIZ 14
 
+// The name field may have DIRSIZ characters and not end in a NUL
+// character.
 struct dirent {
   ushort inum;
+  #ifdef loongarch
   char name[DIRSIZ];
+  #endif
+  #ifdef riscv
+  char name[DIRSIZ] __attribute__((nonstring));
+  #endif
+
 };
 
