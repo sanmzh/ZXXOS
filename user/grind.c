@@ -5,13 +5,17 @@
 #include "kernel/param.h"
 #include "kernel/types.h"
 #include "kernel/stat.h"
-#include "../user/user.h"
+#include "user/user.h"
 #include "kernel/fs.h"
 #include "kernel/fcntl.h"
 #include "kernel/syscall.h"
 #include "kernel/memlayout.h"
+#ifdef riscv
+#include "kernel/riscv.h"
+#endif
+#ifdef loongarch
 #include "kernel/loongarch.h"
-
+#endif
 // from FreeBSD.
 int
 do_rand(unsigned long *ctx)
@@ -305,7 +309,7 @@ iter()
     exit(1);
   }
   if(pid1 == 0){
-    rand_next = 31;
+    rand_next ^= 31;
     go(0);
     exit(0);
   }
@@ -316,7 +320,7 @@ iter()
     exit(1);
   }
   if(pid2 == 0){
-    rand_next = 7177;
+    rand_next ^= 7177;
     go(1);
     exit(0);
   }
@@ -345,6 +349,13 @@ main()
     if(pid > 0){
       wait(0);
     }
-    sleep(20);
+    #ifdef loongarch
+    sleep(20)
+    #endif
+    #ifdef riscv
+    pause(20);
+    rand_next += 1;
+    #endif
+  
   }
 }

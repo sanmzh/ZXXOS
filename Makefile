@@ -3,6 +3,7 @@ U=user
 R=riscv
 L=loongarch
 I=include
+AR=arch
 ARCH?=riscv
 A=$(ARCH)
 
@@ -118,7 +119,7 @@ CFLAGS += -fno-builtin-strchr -fno-builtin-exit -fno-builtin-malloc -fno-builtin
 CFLAGS += -fno-builtin-free
 CFLAGS += -fno-builtin-memcpy -Wno-main
 CFLAGS += -fno-builtin-printf -fno-builtin-fprintf -fno-builtin-vprintf
-CFLAGS += -I. -I$A -I$A/$K -I$I -I$K
+CFLAGS += -I. -I $(AR)/$A -I $(AR)/$A/$K -I$I -I$K
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 CFLAGS += -Driscv
 CFLAGS += -DNET_TESTS_PORT=$(SERVERPORT)		# LAB_NET
@@ -140,43 +141,43 @@ CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb
 CFLAGS += -MD
 CFLAGS += -march=loongarch64 -mabi=lp64s
 CFLAGS += -ffreestanding -fno-common -nostdlib
-CFLAGS += -I. -I$A/$K -I$I -I$K -I$A -fno-stack-protector
+CFLAGS += -I. -I $(AR)/$A/$K -I$I -I$K -I $(AR)/$A -fno-stack-protector
 CFLAGS += -fno-pie -no-pie
 CFLAGS += -Dloongarch
 
 endif
 
-CFLAGS += -I$I/$K
+CFLAGS += -I$I/$K -I$(AR)
 LDFLAGS = -z max-page-size=4096
 
-KERNEL_DEPS = $(OBJS) $A/$K/kernel.ld
+KERNEL_DEPS = $(OBJS)  $(AR)/$A/$K/kernel.ld
 USER_DEPS = $U/%.o $(ULIB)
 ifeq ($(ARCH),loongarch)
 KERNEL_DEPS += $U/initcode
 USER_WAYS = $(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
 endif
 ifeq ($(ARCH),riscv)
-USER_WAYS = $(LD) $(LDFLAGS) -T $A/$U/user.ld -o $@ $< $(ULIB)
-USER_DEPS += $A/$U/user.ld
+USER_WAYS = $(LD) $(LDFLAGS) -T  $(AR)/$A/$U/user.ld -o $@ $< $(ULIB)
+USER_DEPS +=  $(AR)/$A/$U/user.ld
 endif
 
 $K/kernel: $(KERNEL_DEPS)
 	mkdir -p $K
-	$(LD) $(LDFLAGS) -T $A/$K/kernel.ld -o $K/kernel $(OBJS)
+	$(LD) $(LDFLAGS) -T  $(AR)/$A/$K/kernel.ld -o $K/kernel $(OBJS)
 	$(OBJDUMP) -S $K/kernel > $K/kernel.asm
 	$(OBJDUMP) -t $K/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $K/kernel.sym
 
-$K/%.o: $A/$K/%.S
+$K/%.o:  $(AR)/$A/$K/%.S
 	$(CC) $(CFLAGS) -g -c -o $@ $<
 
-$K/%.o: $A/$K/%.c
+$K/%.o:  $(AR)/$A/$K/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $K/%.o: $K/%.c
 	$(CC) $(CFLAGS) -g -c -o $@ $<
 
 ifeq ($(ARCH),riscv)
-$K/start.o: $A/$K/start.c
+$K/start.o:  $(AR)/$A/$K/start.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 tags: $(OBJS)
 	etags riscv/kernel/*.S riscv/kernel/*.c
@@ -185,8 +186,8 @@ ifeq ($(ARCH),loongarch)
 $K/%.o: $K/%.S
 	$(CC) $(CFLAGS) -g -c -o $@ $<
 
-$U/initcode: $A/$U/initcode.S
-	$(CC) $(CFLAGS) -nostdinc -I. -Ikernel -c $A/$U/initcode.S -o $U/initcode.o
+$U/initcode:  $(AR)/$A/$U/initcode.S
+	$(CC) $(CFLAGS) -nostdinc -I. -Ikernel -c  $(AR)/$A/$U/initcode.S -o $U/initcode.o
 	$(LD) $(LDFLAGS) -N -e start -Ttext 0 -o $U/initcode.out $U/initcode.o
 	$(OBJCOPY) -S -O binary $U/initcode.out $U/initcode
 	$(OBJDUMP) -S $U/initcode.o > $U/initcode.asm
@@ -197,13 +198,13 @@ endif
 
 ULIB = $U/ulib.o $U/usys.o $U/printf.o $U/umalloc.o
 
-$U/ulib.o: $A/$U/ulib.c
+$U/ulib.o: $(AR)/$A/$U/ulib.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$U/printf.o: $A/$U/printf.c
+$U/printf.o: $(AR)/$A/$U/printf.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$U/umalloc.o: $A/$U/umalloc.c
+$U/umalloc.o: $(AR)/$A/$U/umalloc.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 ifeq ($(ARCH),riscv)
@@ -216,8 +217,8 @@ $U/_%:  $(USER_DEPS)
 	$(USER_WAYS)
 	$(OBJDUMP) -S $@ > $U/$*.asm
 	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $U/$*.sym
-$U/usys.S : $A/$U/usys.pl
-	perl $A/$U/usys.pl > $U/usys.S
+$U/usys.S :  $(AR)/$A/$U/usys.pl
+	perl  $(AR)/$A/$U/usys.pl > $U/usys.S
 $U/usys.o : $U/usys.S
 	$(CC) $(CFLAGS) -c -o $U/usys.o $U/usys.S
 $U/_forktest: $U/forktest.o $(ULIB)
@@ -225,20 +226,20 @@ $U/_forktest: $U/forktest.o $(ULIB)
 	# in order to be able to max out the proc table.
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $U/_forktest $U/forktest.o $U/ulib.o $U/usys.o
 	$(OBJDUMP) -S $U/_forktest > $U/forktest.asm
-$U/%.o: $A/$U/%.c
+$U/%.o:  $(AR)/$A/$U/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$U/%.o: $A/$U/%.S
+$U/%.o:  $(AR)/$A/$U/%.S
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 ifeq ($(ARCH),riscv)
 # 修改用户程序编译规则，从 riscv/user/ 找源文件
-mkfs/mkfs: $A/mkfs/mkfs.c $I/$K/fs.h $K/param.h
-	gcc -Wno-unknown-attributes -I. -I$I -Driscv -o mkfs/mkfs $A/mkfs/mkfs.c
+mkfs/mkfs:  $(AR)/$A/mkfs/mkfs.c $I/$K/fs.h $K/param.h
+	gcc -Wno-unknown-attributes -I. -I$I -Driscv -o mkfs/mkfs  $(AR)/$A/mkfs/mkfs.c
 endif
 ifeq ($(ARCH),loongarch)
-mkfs/mkfs: $A/mkfs/mkfs.c $I/$K/fs.h $K/param.h
-	gcc -Werror -Wall -I. -I$I -Dloongarch -o mkfs/mkfs $A/mkfs/mkfs.c
+mkfs/mkfs:  $(AR)/$A/mkfs/mkfs.c $I/$K/fs.h $K/param.h
+	gcc -Werror -Wall -I. -I$I -Dloongarch -o mkfs/mkfs  $(AR)/$A/mkfs/mkfs.c
 endif
 UPROGS=\
 	$U/_cat\
@@ -332,8 +333,8 @@ endif
 ifeq ($(ARCH),loongarch)
 SH_FLAGS = -O -fno-omit-frame-pointer -ggdb -MD -march=loongarch64 -mabi=lp64s -ffreestanding -fno-common -nostdlib -I. -I$I -fno-stack-protector -fno-pie -no-pie -c -o
 
-$U/_sh: $A/$U/sh.c $(ULIB)
-	$(CC) $(SH_FLAGS) $U/sh.o $A/$U/sh.c
+$U/_sh:  $(AR)/$A/$U/sh.c $(ULIB)
+	$(CC) $(SH_FLAGS) $U/sh.o  $(AR)/$A/$U/sh.c
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $U/_sh $U/sh.o $(ULIB)
 	$(OBJDUMP) -S $U/_sh > $U/sh.asm
 
@@ -370,7 +371,7 @@ clean:
 		*.asm *.sym *.d packets.pcap \
 		$K/*.o $K/*.d $K/*.asm $K/*.sym \
 		$U/*.o $U/*.d $U/*.asm $U/*.sym $U/_* \
-		$K/ramdisk.h $U/initcode $U/initcode.out \
+		$K/ramdisk.h $U/initcode $L/$U/initcode.out $R/$U/initcode.out $U/initcode.out \
 		$K/kernel fs.img \
 		mkfs/mkfs .gdbinit \
 		$U/usys.S \
@@ -380,7 +381,7 @@ clean:
 		$R/$K/kernel $R/$U/usys.S \
 		$R/mkfs/mkfs \
 		$L/$K/kernel-back fs.img \
-		$L/$K/*.o $L/$K/*.d $L/$K/*.Lsm $L/$K/*.sym $A/$K/tags \
+		$L/$K/*.o $L/$K/*.d $L/$K/*.Lsm $L/$K/*.sym  $(AR)/$A/$K/tags \
 		$L/$U/*.o $L/$U/*.d $L/$U/*.asm $L/$U/*.sym \
 		$L/$K/kernel $L/$U/usys.S \
 		$L/mkfs/mkfs \

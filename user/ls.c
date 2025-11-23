@@ -1,7 +1,10 @@
 #include "kernel/types.h"
 #include "kernel/stat.h"
-#include "../user/user.h"
+#include "user/user.h"
 #include "kernel/fs.h"
+#ifdef riscv
+#include "kernel/fcntl.h"
+#endif
 
 char*
 fmtname(char *path)
@@ -19,6 +22,9 @@ fmtname(char *path)
     return p;
   memmove(buf, p, strlen(p));
   memset(buf+strlen(p), ' ', DIRSIZ-strlen(p));
+  #ifdef riscv
+  buf[sizeof(buf)-1] = '\0';
+  #endif
   return buf;
 }
 
@@ -42,8 +48,11 @@ ls(char *path)
   }
 
   switch(st.type){
+  #ifdef riscv
+  case T_DEVICE:
+  #endif
   case T_FILE:
-    printf("%s %d %d %l\n", fmtname(path), st.type, st.ino, st.size);
+    printf("%s %d %d %d\n", fmtname(path), st.type, st.ino, (int) st.size);
     break;
 
   case T_DIR:
@@ -63,7 +72,7 @@ ls(char *path)
         printf("ls: cannot stat %s\n", buf);
         continue;
       }
-      printf("%s %d %d %d\n", fmtname(buf), st.type, st.ino, st.size);
+      printf("%s %d %d %d\n", fmtname(buf), st.type, st.ino, (int) st.size);
     }
     break;
   }

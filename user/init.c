@@ -6,7 +6,7 @@
 #include "kernel/sleeplock.h"
 #include "kernel/fs.h"
 #include "kernel/file.h"
-#include "../user/user.h"
+#include "user/user.h"
 #include "kernel/fcntl.h"
 
 char *argv[] = { "sh", 0 };
@@ -18,7 +18,11 @@ main(void)
 
   if(open("console", O_RDWR) < 0){
     mknod("console", CONSOLE, 0);
+    #ifdef riscv
+    mknod("statistics", STATS, 0);
+    #endif
     open("console", O_RDWR);
+   
   }
   dup(0);  // stdout
   dup(0);  // stderr
