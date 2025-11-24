@@ -1,6 +1,9 @@
 #include "kernel/types.h"
 #include "kernel/stat.h"
-#include "../user/user.h"
+#ifdef riscv
+#include "kernel/fcntl.h"
+#endif
+#include "user/user.h"
 
 char buf[512];
 
@@ -32,7 +35,7 @@ wc(int fd, char *name)
   printf("%d %d %d %s\n", l, w, c, name);
 }
 
-int
+ints
 main(int argc, char *argv[])
 {
   int fd, i;

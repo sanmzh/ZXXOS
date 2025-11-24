@@ -1,6 +1,6 @@
 #include "kernel/types.h"
 #include "kernel/stat.h"
-#include "../user/user.h"
+#include "user/user.h"
 #include "kernel/param.h"
 
 // Memory allocator by Kernighan and Ritchie,
@@ -52,8 +52,14 @@ morecore(uint nu)
   if(nu < 4096)
     nu = 4096;
   p = sbrk(nu * sizeof(Header));
+  #ifdef loongarch
   if(p == (char*)-1)
     return 0;
+  #endif
+  #ifdef riscv
+  if(p == SBRK_ERROR)
+    return 0;
+  #endif
   hp = (Header*)p;
   hp->s.size = nu;
   free((void*)(hp + 1));

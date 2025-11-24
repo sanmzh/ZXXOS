@@ -204,7 +204,7 @@ $U/ulib.o: $(AR)/$A/$U/ulib.c
 $U/printf.o: $(AR)/$A/$U/printf.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$U/umalloc.o: $(AR)/$A/$U/umalloc.c
+$U/umalloc.o: $U/umalloc.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 ifeq ($(ARCH),riscv)

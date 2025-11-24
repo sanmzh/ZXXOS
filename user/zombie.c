@@ -3,12 +3,18 @@
 
 #include "kernel/types.h"
 #include "kernel/stat.h"
-#include "../user/user.h"
+#include "user/user.h"
 
 int
 main(void)
 {
+  #ifdef riscv
+  if(fork() > 0)
+    pause(5);  // Let child exit before parent.
+  #endif
+  #ifdef loongarch
   if(fork() > 0)
     sleep(5);  // Let child exit before parent.
+  #endif
   exit(0);
 }
