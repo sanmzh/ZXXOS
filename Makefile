@@ -371,18 +371,18 @@ clean:
 		*.asm *.sym *.d packets.pcap \
 		$K/*.o $K/*.d $K/*.asm $K/*.sym \
 		$U/*.o $U/*.d $U/*.asm $U/*.sym $U/_* \
-		$K/ramdisk.h $U/initcode $L/$U/initcode.out $R/$U/initcode.out $U/initcode.out \
+		$K/ramdisk.h $U/initcode $(AR)/$L/$U/initcode.out $(AR)/$R/$U/initcode.out $U/initcode.out \
 		$K/kernel fs.img \
 		mkfs/mkfs .gdbinit \
 		$U/usys.S \
 		$(UPROGS) \
-		$R/$K/*.o $R/$K/*.d $R/$K/*.asm $R/$K/*.sym $R/$K/tags \
-		$R/$U/*.o $R/$U/*.d $R/$U/*.asm $R/$U/*.sym \
-		$R/$K/kernel $R/$U/usys.S \
-		$R/mkfs/mkfs \
-		$L/$K/kernel-back fs.img \
-		$L/$K/*.o $L/$K/*.d $L/$K/*.Lsm $L/$K/*.sym  $(AR)/$A/$K/tags \
-		$L/$U/*.o $L/$U/*.d $L/$U/*.asm $L/$U/*.sym \
-		$L/$K/kernel $L/$U/usys.S \
-		$L/mkfs/mkfs \
-		$L/$K/kernel-back fs.img \
+		$(AR)/$R/$K/*.o $(AR)/$R/$K/*.d $(AR)/$R/$K/*.asm $(AR)/$R/$K/*.sym $(AR)/$R/$K/tags \
+		$(AR)/$R/$U/*.o $(AR)/$R/$U/*.d $(AR)/$R/$U/*.asm $(AR)/$R/$U/*.sym \
+		$(AR)/$R/$K/kernel $(AR)/$R/$U/usys.S \
+		$(AR)/$R/mkfs/mkfs \
+		$(AR)/$L/$K/kernel-back fs.img \
+		$(AR)/$L/$K/*.o $(AR)/$L/$K/*.d $(AR)/$L/$K/*.Lsm $(AR)/$L/$K/*.sym  $(AR)/$L/$K/tags \
+		$(AR)/$L/$U/*.o $(AR)/$L/$U/*.d $(AR)/$L/$U/*.asm $(AR)/$L/$U/*.sym \
+		$(AR)/$L/$K/kernel $(AR)/$L/$U/usys.S \
+		$(AR)/$L/mkfs/mkfs \
+		$(AR)/$L/$K/kernel-back fs.img \
