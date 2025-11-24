@@ -67,6 +67,13 @@ void *shmat(int shmid, const void *addr, int shmflg);
 int shmdt(const void *addr);
 int shmctl(int shmid, int cmd, void *buf);
 
+// 信号量相关系统调用
+struct sembuf;
+struct semid_ds;
+int semget(int key, int nsems, int semflg);
+int semop(int semid, struct sembuf *sops, unsigned nsops);
+int semctl(int semid, int semnum, int cmd, void *arg);
+
 // printf.c
 void fprintf(int, const char*, ...) __attribute__ ((format (printf, 2, 3)));
 void printf(const char*, ...) __attribute__ ((format (printf, 1, 2)));

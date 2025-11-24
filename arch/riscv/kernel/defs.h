@@ -238,3 +238,13 @@ int             shmget(int key, int size, int shmflg);
 void*           shmat(int shmid, const void *addr, int shmflg);
 int             shmdt(const void *addr);
 int             shmctl(int shmid, int cmd, void *buf);
+
+// 前向声明
+struct sembuf;
+struct semid_ds;
+
+// sem.c
+void            sem_init(void);
+int             semget(int key, int nsems, int semflg);
+int             semop(int semid, struct sembuf *sops, unsigned nsops);
+int             semctl(int semid, int semnum, int cmd, void *arg);

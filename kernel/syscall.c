@@ -149,6 +149,11 @@ extern uint64 sys_shmget(void);
 extern uint64 sys_shmat(void);
 extern uint64 sys_shmdt(void);
 extern uint64 sys_shmctl(void);
+
+// 信号量系统调用
+extern uint64 sys_semget(void);
+extern uint64 sys_semop(void);
+extern uint64 sys_semctl(void);
 #endif
 
 #ifdef loongarch
@@ -206,6 +211,11 @@ static uint64 (*syscalls[])(void) = {
 [SYS_shmat] sys_shmat,
 [SYS_shmdt] sys_shmdt,
 [SYS_shmctl] sys_shmctl,
+
+// 信号量系统调用
+[SYS_semget] sys_semget,
+[SYS_semop] sys_semop,
+[SYS_semctl] sys_semctl,
 #endif
 #ifdef loongarch
 [SYS_sleep]   sys_sleep,

@@ -53,7 +53,9 @@ OBJS += \
   $K/sprintf.o \
   $K/kernelvec.o \
   $K/shm.o \
-  $K/sysshm.o
+  $K/sysshm.o \
+  $K/sem.o \
+  $K/syssem.o
 endif
 
 ifeq ($(ARCH),loongarch)
@@ -274,6 +276,7 @@ UPROGS += $U/_grind\
 	$U/_rwlktest\
 	$U/_mmaptest\
 	$U/_shmtest\
+	$U/_semtest\
 
 
 fs.img: mkfs/mkfs README $(UPROGS)

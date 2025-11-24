@@ -82,4 +82,9 @@
 #define SYS_shmdt     539
 #define SYS_shmctl    540
 
+// 信号量相关系统调用
+#define SYS_semget    541
+#define SYS_semop     542
+#define SYS_semctl    543
+
 #endif // _SYS_H

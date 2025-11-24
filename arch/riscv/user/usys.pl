@@ -66,3 +66,8 @@ entry("shmget");
 entry("shmat");
 entry("shmdt");
 entry("shmctl");
+
+# 信号量系统调用
+entry("semget");
+entry("semop");
+entry("semctl");

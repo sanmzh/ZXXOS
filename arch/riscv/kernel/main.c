@@ -45,6 +45,7 @@ main()
     iinit();         // inode table
     fileinit();      // file table
     shm_init();       // shared memory
+    sem_init();       // semaphore
     virtio_disk_init(); // emulated hard disk
     // LAB_NET
     pci_init();

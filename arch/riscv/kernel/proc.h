@@ -110,6 +110,62 @@ struct shm_region {
   int marked_for_deletion;      // 标记是否等待删除
 };
 
+// 信号量结构体
+struct sem {
+  int value;    // 信号量值
+  int pid;      // 最后操作信号量的进程ID
+};
+
+// 信号量集结构体
+#define MAX_SEMS_PER_SET 16
+#define MAX_SEM_SETS 16
+struct sem_set {
+  int used;                     // 是否已被使用
+  int semid;                    // 信号量集标识符
+  int key;                      // 信号量集键值
+  int nsems;                    // 信号量数量
+  int refcnt;                   // 引用计数
+  struct sem sems[MAX_SEMS_PER_SET];  // 信号量数组
+  struct spinlock lock;         // 自旋锁
+  int marked_for_deletion;      // 标记是否等待删除
+};
+
+// 信号量操作结构体
+struct sembuf {
+  short sem_num;  // 信号量编号
+  short sem_op;   // 操作值
+  short sem_flg;  // 操作标志
+};
+
+// 信号量集信息结构体
+struct semid_ds {
+  struct {
+    int key;   // 键值
+    int seq;   // 序列号
+  } sem_perm;
+  int sem_nsems;  // 信号量数量
+  int sem_otime;  // 最后操作时间
+  int sem_ctime;  // 创建时间
+};
+
+// 信号量操作限制
+#define MAX_SEM_OPS 16
+
+// IPC命令
+#define IPC_CREAT  0x01000
+#define IPC_NOWAIT 0x08000
+#define IPC_RMID   1
+
+// 信号量控制命令
+#define GETVAL  12
+#define SETVAL  13
+#define GETPID  14
+#define GETNCNT 15
+#define GETZCNT 16
+#define GETALL  17
+#define SETALL  18
+#define IPC_STAT 19
+
 // Per-process state
 struct proc {
   struct spinlock lock;
