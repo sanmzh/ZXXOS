@@ -46,6 +46,7 @@ main()
     fileinit();      // file table
     shm_init();       // shared memory
     sem_init();       // semaphore
+    msg_init();       // message queue
     virtio_disk_init(); // emulated hard disk
     // LAB_NET
     pci_init();

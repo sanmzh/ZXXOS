@@ -74,6 +74,13 @@ int semget(int key, int nsems, int semflg);
 int semop(int semid, struct sembuf *sops, unsigned nsops);
 int semctl(int semid, int semnum, int cmd, void *arg);
 
+// 消息队列相关系统调用
+struct msgbuf;
+int msgget(int key, int msgflg);
+int msgsnd(int msqid, const void *msgp, unsigned msgsz, int msgflg);
+int msgrcv(int msqid, void *msgp, unsigned msgsz, int msgtyp, int msgflg);
+int msgctl(int msqid, int cmd, void *buf);
+
 // printf.c
 void fprintf(int, const char*, ...) __attribute__ ((format (printf, 2, 3)));
 void printf(const char*, ...) __attribute__ ((format (printf, 1, 2)));

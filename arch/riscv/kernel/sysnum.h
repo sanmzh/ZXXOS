@@ -87,4 +87,10 @@
 #define SYS_semop     542
 #define SYS_semctl    543
 
+// 消息队列相关系统调用
+#define SYS_msgget    544
+#define SYS_msgsnd    545
+#define SYS_msgrcv    546
+#define SYS_msgctl    547
+
 #endif // _SYS_H
