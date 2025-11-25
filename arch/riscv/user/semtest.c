@@ -93,14 +93,16 @@ void test_sem_sync() {
         }
 
         printf("子进程: 获得信号量，执行任务...\n");
-        sleep(10); // 模拟任务执行
         printf("子进程: 任务完成\n");
 
         exit(0);
     } else {
         // 父进程
-        printf("父进程: 等待2秒后释放信号量...\n");
-        sleep(20); // 等待2秒
+        // 不需要sleep，直接释放信号量
+        // 此时子进程可能还没开始，也可能已经在等待，
+        // 但由于信号量初始值为0，父进程先释放也不会有问题
+        
+        printf("父进程: 释放信号量...\n");
 
         // V操作（释放信号量）
         struct sembuf op_v = {0, 1, 0};
@@ -109,11 +111,9 @@ void test_sem_sync() {
             return;
         }
 
-        printf("父进程: 释放信号量\n");
-
         // 等待子进程结束
         wait(0);
-
+        
         // 删除信号量集
         if (semctl(semid, 0, IPC_RMID, 0) < 0) {
             printf("删除信号量集失败\n");
@@ -153,6 +153,12 @@ void test_multiple_sems() {
         return;
     }
     printf("信号量集包含%d个信号量\n", info.sem_nsems);
+    
+    // 检查信号量数量是否符合预期
+    if (info.sem_nsems != 3) {
+        printf("错误: 预期3个信号量，实际为%d个\n", info.sem_nsems);
+        return;
+    }
 
     for (int i = 0; i < 3; i++) {
         int value = semctl(semid, i, GETVAL, 0);
