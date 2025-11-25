@@ -2,6 +2,7 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 #include "kernel/fcntl.h"
+#include "user/sem.h"
 
 // 字符串连接函数
 void strcat(char *dest, const char *src) {
@@ -262,8 +263,27 @@ void test_concurrent_access() {
   }
   printf("创建共享内存成功，shmid = %d\n", shmid);
   
-  // 创建5个子进程
-  int num_children = 5;
+  // 创建信号量用于同步
+  int semid = semget(9999, 1, IPC_CREAT | 0666);
+  if (semid < 0) {
+    printf("创建信号量失败\n");
+    exit(1);
+  }
+  printf("创建信号量成功，semid = %d\n", semid);
+  
+  // 初始化信号量值为1（互斥锁）
+  int sem_val = 1;
+  if (semctl(semid, 0, SETVAL, &sem_val) < 0) {
+    printf("初始化信号量失败\n");
+    exit(1);
+  }
+  printf("初始化信号量值为 %d\n", sem_val);
+  
+  // 创建10个子进程进行压力测试
+  int num_children = 10;
+  int pids[10];
+  printf("开始创建%d个子进程\n", num_children);
+  
   for (int i = 0; i < num_children; i++) {
     int pid = fork();
     if (pid < 0) {
@@ -279,45 +299,106 @@ void test_concurrent_access() {
         exit(1);
       }
       
-      // 每个子进程写入不同的数据
-      // 为每个进程使用不同的共享内存区域，避免竞争条件
-      char *my_ptr = shm_ptr + i * 256;  // 每个进程使用256字节的区域，确保足够的间距
+      // 每个子进程使用不同的共享内存区域
+      // 确保不会超出共享内存边界
+      int region_size = SHM_SIZE / num_children;
+      char *my_ptr = shm_ptr + i * region_size;
       
-      // 先清空区域
-      for (int k = 0; k < 256; k++) {
-        my_ptr[k] = '\0';
-      }
+      // 清空区域
+      struct sembuf sem_op_wait = {0, -1, 0};  // P操作
+      struct sembuf sem_op_signal = {0, 1, 0}; // V操作
       
-      for (int j = 0; j < 10; j++) {
-        // 使用更安全的方式构建字符串
+      semop(semid, &sem_op_wait, 1);
+      printf("子进程 %d 开始执行，将进行100次写入操作\n", i);
+      semop(semid, &sem_op_signal, 1);
+      
+      for (int j = 0; j < 100; j++) {
+        // 每10次操作报告一次进度
+        if (j % 10 == 0) {
+          semop(semid, &sem_op_wait, 1);
+          printf("子进程 %d: 完成 %d 次写入操作\n", i, j);
+          semop(semid, &sem_op_signal, 1);
+        }
+        
+        // 使用信号量保护共享内存访问
+        semop(semid, &sem_op_wait, 1);
+        
+        // 构造数据
         char temp[64];
-        strcpy(temp, "Child ");
+        strcpy(temp, "Process ");
         char num_str[16];
         itoa(i, num_str);
         strcat(temp, num_str);
-        strcat(temp, ", iteration ");
+        strcat(temp, ", write ");
         itoa(j, num_str);
         strcat(temp, num_str);
         
-        // 复制到共享内存
-        strcpy(my_ptr, temp);
-        sleep(1);  // 模拟处理时间
-        printf("子进程 %d 写入: %s\n", i, my_ptr);
+        // 写入共享内存，确保不会超出分配的区域
+        int len = strlen(temp);
+        if (len < region_size - 1) {
+          strcpy(my_ptr, temp);
+        }
+        
+        semop(semid, &sem_op_signal, 1);
+        
+        // 再次获取信号量读取并验证数据
+        semop(semid, &sem_op_wait, 1);
+        
+        // 读取并验证数据
+        char read_buffer[64];
+        strcpy(read_buffer, my_ptr);
+        if (strcmp(read_buffer, temp) != 0) {
+          printf("子进程 %d: 数据验证失败，期望: %s, 实际: %s\n", i, temp, read_buffer);
+        }
+        
+        semop(semid, &sem_op_signal, 1);
+        
+        // 模拟一些处理时间
+        sleep(0);
       }
+      
+      // 报告完成
+      semop(semid, &sem_op_wait, 1);
+      printf("子进程 %d: 完成所有100次写入操作\n", i);
+      semop(semid, &sem_op_signal, 1);
       
       // 分离共享内存
       if (shmdt(shm_ptr) < 0) {
+        semop(semid, &sem_op_wait, 1);
         printf("子进程 %d 分离共享内存失败\n", i);
+        semop(semid, &sem_op_signal, 1);
         exit(1);
       }
       
       exit(0);
     }
+    
+    // 父进程记录子进程PID
+    pids[i] = pid;
   }
   
   // 等待所有子进程完成
+  printf("所有子进程创建完成，等待子进程结束\n");
   for (int i = 0; i < num_children; i++) {
+    struct sembuf sem_op_wait = {0, -1, 0};  // P操作
+    struct sembuf sem_op_signal = {0, 1, 0}; // V操作
+    
+    semop(semid, &sem_op_wait, 1);
+    printf("等待子进程 %d (PID=%d) 结束\n", i, pids[i]);
+    semop(semid, &sem_op_signal, 1);
+    
     wait(0);
+    
+    semop(semid, &sem_op_wait, 1);
+    printf("子进程 %d 已完成\n", i);
+    semop(semid, &sem_op_signal, 1);
+  }
+  
+  // 删除信号量
+  if (semctl(semid, 0, IPC_RMID, 0) < 0) {
+    printf("删除信号量失败\n");
+  } else {
+    printf("删除信号量成功\n");
   }
   
   // 删除共享内存
@@ -326,6 +407,8 @@ void test_concurrent_access() {
   } else {
     printf("删除共享内存成功\n");
   }
+  
+  printf("多进程并发访问测试完成\n");
 }
 
 // 大数据量测试
@@ -464,6 +547,188 @@ void test_edge_cases() {
   }
 }
 
+// 共享内存压力测试
+void stress_test_shm() {
+  printf("\n=== 共享内存压力测试 ===\n");
+  
+  // 创建共享内存区域（使用更小的大小避免分配失败）
+  int shmsize = 4 * 1024; // 4KB
+  int shmid = shmget(SHM_KEY + 4, shmsize, 0x01000);
+  if (shmid < 0) {
+    printf("创建共享内存失败\n");
+    exit(1);
+  }
+  printf("创建共享内存成功，shmid = %d, size = %d\n", shmid, shmsize);
+  
+  // 创建两个信号量：一个用于保护输出，一个用于保护共享内存
+  int output_sem = semget(9997, 1, IPC_CREAT | 0666);
+  int shm_sem = semget(9998, 1, IPC_CREAT | 0666);
+  if (output_sem < 0 || shm_sem < 0) {
+    printf("创建信号量失败\n");
+    exit(1);
+  }
+  
+  // 初始化信号量值为1
+  int sem_val = 1;
+  semctl(output_sem, 0, SETVAL, &sem_val);
+  semctl(shm_sem, 0, SETVAL, &sem_val);
+  printf("创建信号量成功，output_sem = %d, shm_sem = %d\n", output_sem, shm_sem);
+  
+  // 创建10个子进程进行压力测试（进一步减少进程数）
+  int num_children = 10;
+  int pids[10];
+  struct sembuf op_pout = {0, -1, 0};
+  struct sembuf op_vout = {0, 1, 0};
+  
+  semop(output_sem, &op_pout, 1);
+  printf("开始创建%d个子进程\n", num_children);
+  semop(output_sem, &op_vout, 1);
+  
+  for (int i = 0; i < num_children; i++) {
+    int pid = fork();
+    if (pid < 0) {
+      semop(output_sem, &op_pout, 1);
+      printf("创建子进程失败\n");
+      semop(output_sem, &op_vout, 1);
+      exit(1);
+    }
+    
+    if (pid == 0) {
+      // 子进程
+      char *shm_ptr = (char*)shmat(shmid, 0, 0);
+      if (shm_ptr == (char*)-1) {
+        semop(output_sem, &op_pout, 1);
+        printf("子进程 %d 附加共享内存失败\n", i);
+        semop(output_sem, &op_vout, 1);
+        exit(1);
+      }
+      
+      // 每个子进程使用不同的共享内存区域 (确保不会超出边界)
+      int region_size = shmsize / num_children;
+      char *my_ptr = shm_ptr + i * region_size;
+      
+      struct sembuf op_pshm = {0, -1, 0};
+      struct sembuf op_vshm = {0, 1, 0};
+      
+      semop(output_sem, &op_pout, 1);
+      printf("子进程 %d 开始执行，将进行100次读写操作\n", i);
+      semop(output_sem, &op_vout, 1);
+      
+      for (int j = 0; j < 100; j++) { // 减少到100次操作
+        // 每20次操作报告一次进度
+        if (j % 20 == 0) {
+          semop(output_sem, &op_pout, 1);
+          printf("子进程 %d: 完成 %d 次读写操作\n", i, j);
+          semop(output_sem, &op_vout, 1);
+        }
+        
+        // 写操作
+        semop(shm_sem, &op_pshm, 1);
+        
+        // 构造数据
+        char temp[64];
+        strcpy(temp, "P");
+        char num_str[16];
+        itoa(i, num_str);
+        strcat(temp, num_str);
+        strcat(temp, "-W");
+        itoa(j, num_str);
+        strcat(temp, num_str);
+        
+        // 写入共享内存，确保不会超出分配的区域
+        int len = strlen(temp);
+        if (len < region_size - 1) {
+          strcpy(my_ptr, temp);
+        }
+        
+        semop(shm_sem, &op_vshm, 1);
+        
+        // 读操作
+        semop(shm_sem, &op_pshm, 1);
+        
+        // 读取并验证数据
+        char read_buffer[64];
+        int read_len = strlen(my_ptr);
+        if (read_len < 64) {
+          strcpy(read_buffer, my_ptr);
+          // 验证读取的数据是否正确
+          if (strcmp(read_buffer, temp) != 0) {
+            semop(output_sem, &op_pout, 1);
+            printf("子进程 %d: 数据验证失败，期望: %s, 实际: %s\n", i, temp, read_buffer);
+            semop(output_sem, &op_vout, 1);
+          }
+        }
+        
+        semop(shm_sem, &op_vshm, 1);
+        
+        // 模拟一些处理时间
+        sleep(0);
+      }
+      
+      // 报告完成
+      semop(output_sem, &op_pout, 1);
+      printf("子进程 %d: 完成所有100次读写操作\n", i);
+      semop(output_sem, &op_vout, 1);
+      
+      // 分离共享内存
+      if (shmdt(shm_ptr) < 0) {
+        semop(output_sem, &op_pout, 1);
+        printf("子进程 %d 分离共享内存失败\n", i);
+        semop(output_sem, &op_vout, 1);
+        exit(1);
+      }
+      
+      exit(0);
+    }
+    
+    // 父进程记录子进程PID
+    pids[i] = pid;
+  }
+  
+  // 等待所有子进程完成
+  semop(output_sem, &op_pout, 1);
+  printf("所有子进程创建完成，等待子进程结束\n");
+  semop(output_sem, &op_vout, 1);
+  
+  for (int i = 0; i < num_children; i++) {
+    semop(output_sem, &op_pout, 1);
+    printf("等待子进程 %d (PID=%d) 结束\n", i, pids[i]);
+    semop(output_sem, &op_vout, 1);
+    
+    wait(0);
+    
+    semop(output_sem, &op_pout, 1);
+    printf("子进程 %d 已完成\n", i);
+    semop(output_sem, &op_vout, 1);
+  }
+  
+  // 删除信号量
+  if (semctl(output_sem, 0, IPC_RMID, 0) < 0 || semctl(shm_sem, 0, IPC_RMID, 0) < 0) {
+    semop(output_sem, &op_pout, 1);
+    printf("删除信号量失败\n");
+    semop(output_sem, &op_vout, 1);
+  } else {
+    semop(output_sem, &op_pout, 1);
+    printf("删除信号量成功\n");
+    semop(output_sem, &op_vout, 1);
+  }
+  
+  // 删除共享内存
+  if (shmctl(shmid, 1, 0) < 0) {
+    semop(output_sem, &op_pout, 1);
+    printf("删除共享内存失败\n");
+    semop(output_sem, &op_vout, 1);
+  } else {
+    semop(output_sem, &op_pout, 1);
+    printf("删除共享内存成功\n");
+    semop(output_sem, &op_vout, 1);
+  }
+  
+  semop(output_sem, &op_pout, 1);
+  printf("共享内存压力测试完成\n");
+  semop(output_sem, &op_vout, 1);
+}
+
 int main() {
   printf("共享内存测试程序\n");
 
@@ -473,6 +738,9 @@ int main() {
   test_concurrent_access();
   test_large_data();
   test_edge_cases();
+  
+  // 共享内存压力测试
+  stress_test_shm();
 
   printf("\n所有测试通过！\n");
   exit(0);
