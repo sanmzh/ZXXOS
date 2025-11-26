@@ -55,7 +55,9 @@ OBJS += \
   $K/shm.o \
   $K/sysshm.o \
   $K/sem.o \
-  $K/syssem.o
+  $K/syssem.o \
+  $K/sysmsg.o \
+  $K/msg.o
 endif
 
 ifeq ($(ARCH),loongarch)
@@ -277,6 +279,7 @@ UPROGS += $U/_grind\
 	$U/_mmaptest\
 	$U/_shmtest\
 	$U/_semtest\
+	$U/_msgtest\
 
 
 fs.img: mkfs/mkfs README $(UPROGS)

@@ -71,3 +71,9 @@ entry("shmctl");
 entry("semget");
 entry("semop");
 entry("semctl");
+
+# 消息队列系统调用
+entry("msgget");
+entry("msgsnd");
+entry("msgrcv");
+entry("msgctl");

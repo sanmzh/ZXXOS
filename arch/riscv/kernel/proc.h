@@ -148,13 +148,36 @@ struct semid_ds {
   int sem_ctime;  // 创建时间
 };
 
-// 信号量操作限制
-#define MAX_SEM_OPS 16
+// 消息队列结构体
+#define MAX_MSG_SIZE 512
+#define MAX_MSG_QUEUE_SIZE 16
+struct msg {
+  struct msg *next;    // 下一条消息
+  long type;           // 消息类型
+  int size;            // 消息大小
+  char data[MAX_MSG_SIZE]; // 消息数据
+};
 
-// IPC命令
-#define IPC_CREAT  0x01000
-#define IPC_NOWAIT 0x08000
-#define IPC_RMID   1
+// 消息队列结构体
+#define MAX_MSG_QUEUES 16
+struct msg_queue {
+  int used;                      // 是否已被使用
+  int msqid;                     // 消息队列标识符
+  int key;                       // 消息队列键值
+  struct msg *head;              // 消息队列头指针
+  struct msg *tail;              // 消息队列尾指针
+  int msg_count;                 // 消息数量
+  int max_bytes;                 // 队列最大字节数
+  int refcnt;                    // 引用计数
+  struct spinlock lock;          // 自旋锁
+  int marked_for_deletion;       // 标记是否等待删除
+};
+
+// 消息缓冲区结构体
+struct msgbuf {
+  long mtype;         // 消息类型
+  char mtext[1];      // 消息数据（变长）
+};
 
 // 信号量控制命令
 #define GETVAL  12
@@ -165,6 +188,16 @@ struct semid_ds {
 #define GETALL  17
 #define SETALL  18
 #define IPC_STAT 19
+
+// IPC命令
+#define IPC_CREAT  0x01000
+#define IPC_NOWAIT 0x08000
+#define IPC_RMID   1
+#define IPC_SET    2
+#define IPC_PRIVATE 0
+
+// 信号量操作限制
+#define MAX_SEM_OPS 16
 
 // Per-process state
 struct proc {

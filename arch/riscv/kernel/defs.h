@@ -230,6 +230,15 @@ void            statsinc(void);
 
 // sprintf.c
 int             snprintf(char*, unsigned long, const char*, ...);
+
+// msg.c
+struct msgbuf;
+void            msg_init(void);
+int             msgget(int key, int msgflg);
+int             msgsnd(int msqid, const void *msgp, unsigned msgsz, int msgflg);
+int             msgrcv(int msqid, void *msgp, unsigned msgsz, int msgtyp, int msgflg);
+int             msgctl(int msqid, int cmd, void *buf);
+
 // END LAB_LOCK
 
 // shm.c
