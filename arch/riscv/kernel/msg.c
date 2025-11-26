@@ -73,7 +73,7 @@ msg_alloc_locked(void)
   struct msg_queue *queue = 0;
 
   for(int i = 0; i < MAX_MSG_QUEUES; i++) {
-    if(!msg_queues[i].used) {
+    if(!msg_queues[i].used || (msg_queues[i].marked_for_deletion && msg_queues[i].key == 0)) {
       queue = &msg_queues[i];
       queue->used = 1;
       queue->refcnt = 1;
@@ -225,7 +225,7 @@ msgsnd(int msqid, const void *msgp, unsigned msgsz, int msgflg)
   }
 
   // 分配新消息
-  printf("msgsnd: attempting to allocate message of size %ld\n", sizeof(struct msg) + msgsz); // 新增：准备分配内存
+  printf("msgsnd: attempting to allocate message\n"); // 新增：准备分配内存
   msg = (struct msg *)kalloc();
   if(!msg) {
     printf("msgsnd: failed to allocate message\n");
@@ -494,6 +494,8 @@ msgctl(int msqid, int cmd, void *buf)
       printf("msgctl: marking queue for deletion, refcnt=%d\n", queue->refcnt);
       // 标记为删除
       queue->marked_for_deletion = 1;
+      // 释放 key，以便可以创建新的队列
+      queue->key = 0;
       
       // 唤醒所有等待的进程
       acquire(&queue->lock);

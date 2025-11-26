@@ -9,7 +9,7 @@
 
 struct msgbuf {
   long mtype;
-  char mtext[STRESS_MSGSIZE];  // 修复：使用STRESS_MSGSIZE确保足够大
+  char mtext[512];  // 增加缓冲区大小以支持更大的消息
 };
 
 // 新测试函数声明
@@ -350,7 +350,7 @@ test_variable_size_messages()
   printf("msgid = %d\n", msgid);
 
   // 发送不同大小的消息
-  int sizes[] = {8, 32, 64, 128, 256, 512};
+  int sizes[] = {8, 32, 64, 128, 256, 511}; // 511 而不是 512，避免缓冲区溢出
   int num_sizes = sizeof(sizes) / sizeof(sizes[0]);
 
   for (int i = 0; i < num_sizes; i++) {
