@@ -39,7 +39,7 @@ msg_find_by_id_locked(int msqid)
   struct msg_queue *queue = 0;
 
   for(int i = 0; i < MAX_MSG_QUEUES; i++) {
-    if(msg_queues[i].used && msg_queues[i].msqid == msqid) {
+    if(msg_queues[i].used && msg_queues[i].msqid == msqid && !msg_queues[i].marked_for_deletion) {
       queue = &msg_queues[i];
       break;
     }
@@ -56,7 +56,7 @@ msg_find_by_key_locked(int key)
   struct msg_queue *queue = 0;
 
   for(int i = 0; i < MAX_MSG_QUEUES; i++) {
-    if(msg_queues[i].used && msg_queues[i].key == key) {
+    if(msg_queues[i].used && msg_queues[i].key == key && !msg_queues[i].marked_for_deletion) {
       queue = &msg_queues[i];
       break;
     }
@@ -424,8 +424,35 @@ msgrcv(int msqid, void *msgp, unsigned msgsz, int msgtyp, int msgflg)
     } else {
       // 阻塞模式，等待有消息
       printf("msgrcv: no message found, blocking mode, waiting for message, msgtyp=%d\n", msgtyp);
-      while(!queue->head && !queue->marked_for_deletion) {
+      // 检查是否有符合类型的消息
+      int has_matching_msg = 0;
+      struct msg *temp_msg = queue->head;
+      while(temp_msg) {
+        if(msgtyp == 0 ||
+           (msgtyp > 0 && temp_msg->type == msgtyp) ||
+           (msgtyp < 0 && temp_msg->type <= -msgtyp)) {
+          has_matching_msg = 1;
+          break;
+        }
+        temp_msg = temp_msg->next;
+      }
+
+      // 如果没有符合类型的消息且队列未被标记删除，则等待
+      while(!has_matching_msg && !queue->marked_for_deletion) {
         sleep(queue, &queue->lock);
+
+        // 唤醒后重新检查是否有符合类型的消息
+        has_matching_msg = 0;
+        temp_msg = queue->head;
+        while(temp_msg) {
+          if(msgtyp == 0 ||
+             (msgtyp > 0 && temp_msg->type == msgtyp) ||
+             (msgtyp < 0 && temp_msg->type <= -msgtyp)) {
+            has_matching_msg = 1;
+            break;
+          }
+          temp_msg = temp_msg->next;
+        }
       }
       
       // 检查是否因为队列被删除而被唤醒
