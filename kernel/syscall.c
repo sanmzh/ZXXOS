@@ -122,22 +122,18 @@ extern uint64 sys_unlink(void);
 extern uint64 sys_link(void);
 extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
-
+extern uint64 sys_trace(void);
 #ifdef riscv
 extern uint64 sys_pause(void);
 
-extern uint64 sys_trace(void);
 extern uint64 sys_sysinfo(void);
-
 // page table
 extern uint64 sys_kpgtbl(void);
-
 // LAB_NET
 extern uint64 sys_bind(void);
 extern uint64 sys_unbind(void);
 extern uint64 sys_send(void);
 extern uint64 sys_recv(void);
-
 // LAB_LOCK
 extern uint64 sys_cpupin(void);
 
@@ -185,9 +181,9 @@ static uint64 (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+[SYS_trace]   sys_trace,
 #ifdef riscv
 [SYS_pause]   sys_pause,
-[SYS_trace]   sys_trace,
 [SYS_sysinfo] sys_sysinfo,
 
 // LAB_PGTBL
@@ -224,7 +220,6 @@ static uint64 (*syscalls[])(void) = {
 
 };
 
-#ifdef riscv
 //定义系统调用名称的字符串数组
 const char* syscall_names[] = {
 [SYS_fork]    "fork",
@@ -248,14 +243,17 @@ const char* syscall_names[] = {
 [SYS_link]    "link",
 [SYS_mkdir]   "mkdir",
 [SYS_close]   "close",
+#ifdef riscv 
 [SYS_pause]   "pause",
-
-[SYS_trace]   "trace",
 [SYS_sysinfo] "sysinfo",
+#endif
+#ifdef loongarch
+[SYS_sleep]   "sleep",
+#endif
+[SYS_trace]   "trace",
 
 
 };
-#endif
 
 void
 syscall(void)
@@ -268,11 +266,9 @@ syscall(void)
     // Use num to lookup the system call function for num, call it,
     // and store its return value in p->trapframe->a0
     p->trapframe->a0 = syscalls[num]();
-    #ifdef riscv
     if((p->trace_mask >> num) & 1) {      // 如果当前进程设置了对该编号系统调用的 trace
       printf("%d: syscall %s -> %ld\n", p->pid, syscall_names[num], p->trapframe->a0);
     }
-    #endif
   } else {
     printf("%d %s: unknown sys call %d\n",
             p->pid, p->name, num);

@@ -257,16 +257,16 @@ UPROGS=\
 	$U/_sh\
 	$U/_stressfs\
 	$U/_usertests\
+	$U/_trace\
 #	$U/_grind\
-	$U/_wc\
+        $U/_wc\
 	$U/_zombie\
-
+	
 ifeq ($(ARCH),riscv)
 UPROGS += $U/_grind\
 	$U/_logstress\
 	$U/_forphan\
 	$U/_dorphan\
-	$U/_trace\
 	$U/_sysinfotest\
 	$U/_pgtbltest\
 	$U/_bttest\
@@ -369,12 +369,13 @@ qemu: all
 	
 endif
 
+# ramdisk.h is 生成文件
 clean:
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
 		*.asm *.sym *.d packets.pcap \
 		$K/*.o $K/*.d $K/*.asm $K/*.sym \
 		$U/*.o $U/*.d $U/*.asm $U/*.sym $U/_* \
-		$K/ramdisk.h $U/initcode $(AR)/$L/$U/initcode.out $(AR)/$R/$U/initcode.out $U/initcode.out \
+		$(AR)/$L/$K/ramdisk.h $(AR)/$R/$K/ramdisk.h $U/initcode $(AR)/$L/$U/initcode.out $(AR)/$R/$U/initcode.out $U/initcode.out $K/ramdisk.h\
 		$K/kernel fs.img \
 		mkfs/mkfs .gdbinit \
 		$U/usys.S \
