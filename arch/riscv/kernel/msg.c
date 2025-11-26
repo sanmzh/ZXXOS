@@ -143,6 +143,7 @@ msgsnd(int msqid, const void *msgp, unsigned msgsz, int msgflg)
 
   // 检查消息大小
   if(msgsz > MAX_MSG_SIZE) {
+    printf("msgsnd: msgsz %d > MAX_MSG_SIZE %d\n", msgsz, MAX_MSG_SIZE);
     return -1;
   }
 
@@ -151,44 +152,88 @@ msgsnd(int msqid, const void *msgp, unsigned msgsz, int msgflg)
   // 查找消息队列
   queue = msg_find_by_id_locked(msqid);
   if(!queue) {
+    printf("msgsnd: queue not found for msqid %d\n", msqid);
+    release(&msg_lock);
+    return -1;
+  }
+  printf("msgsnd: found queue with msqid %d\n", msqid); // 新增：确认找到队列
+  
+  // 检查队列是否已被标记为删除
+  if(queue->marked_for_deletion) {
+    printf("msgsnd: queue marked for deletion\n");
     release(&msg_lock);
     return -1;
   }
 
   // 增加引用计数
   queue->refcnt++;
+  printf("msgsnd: increased refcnt to %d\n", queue->refcnt);
 
   release(&msg_lock);
 
   // 获取队列锁
   acquire(&queue->lock);
+  
+  // 再次检查队列是否已被标记为删除
+  if(queue->marked_for_deletion) {
+    printf("msgsnd: queue marked for deletion after acquiring queue lock\n");
+    release(&queue->lock);
+    
+    acquire(&msg_lock);
+    queue->refcnt--;
+    printf("msgsnd: decreased refcnt to %d\n", queue->refcnt);
+    release(&msg_lock);
+    
+    return -1;
+  }
 
   // 检查队列是否已满
   if(queue->msg_count >= MAX_MSG_QUEUE_SIZE) {
     if(msgflg & IPC_NOWAIT) {
       // 非阻塞模式，直接返回错误
+      printf("msgsnd: queue full, non-blocking mode\n");
       release(&queue->lock);
       
       acquire(&msg_lock);
       queue->refcnt--;
+      printf("msgsnd: decreased refcnt to %d\n", queue->refcnt);
       release(&msg_lock);
       
       return -1;
     } else {
       // 阻塞模式，等待队列有空间
-      while(queue->msg_count >= MAX_MSG_QUEUE_SIZE) {
+      printf("msgsnd: queue full, blocking mode, waiting for space\n");
+      while(queue->msg_count >= MAX_MSG_QUEUE_SIZE && !queue->marked_for_deletion) {
         sleep(queue, &queue->lock);
+      }
+      
+      // 再次检查队列是否已被标记为删除
+      if(queue->marked_for_deletion) {
+        printf("msgsnd: queue marked for deletion while waiting\n");
+        release(&queue->lock);
+        
+        acquire(&msg_lock);
+        queue->refcnt--;
+        printf("msgsnd: decreased refcnt to %d\n", queue->refcnt);
+        release(&msg_lock);
+        
+        return -1;
+      } else {
+        printf("msgsnd: woken up, queue has space now\n"); // 新增：在阻塞后成功获得空间
       }
     }
   }
 
   // 分配新消息
+  printf("msgsnd: attempting to allocate message of size %ld\n", sizeof(struct msg) + msgsz); // 新增：准备分配内存
   msg = (struct msg *)kalloc();
   if(!msg) {
+    printf("msgsnd: failed to allocate message\n");
     release(&queue->lock);
     
     acquire(&msg_lock);
     queue->refcnt--;
+    printf("msgsnd: decreased refcnt to %d\n", queue->refcnt);
     release(&msg_lock);
     
     return -1;
@@ -199,6 +244,7 @@ msgsnd(int msqid, const void *msgp, unsigned msgsz, int msgflg)
   msg->type = mbuf->mtype;
   msg->size = msgsz;
   memmove(msg->data, mbuf->mtext, msgsz);
+  printf("msgsnd: prepared message of size %d, type %d\n", msgsz, (int)msg->type);
 
   // 添加到队列尾部
   if(queue->tail) {
@@ -208,15 +254,37 @@ msgsnd(int msqid, const void *msgp, unsigned msgsz, int msgflg)
   }
   queue->tail = msg;
   queue->msg_count++;
+  printf("msgsnd: added message to queue, msg_count now %d\n", queue->msg_count);
 
   // 唤醒等待接收消息的进程
   wakeup(queue);
+  printf("msgsnd: woke up receivers\n");
 
   release(&queue->lock);
 
   // 减少引用计数
   acquire(&msg_lock);
   queue->refcnt--;
+  printf("msgsnd: decreased refcnt to %d\n", queue->refcnt);
+  
+  // 如果队列已被标记删除且没有进程在使用，则清理资源
+  if(queue->marked_for_deletion && queue->refcnt == 0) {
+    printf("msgsnd: cleaning up deleted queue\n");
+    struct msg *msg = queue->head;
+    while(msg) {
+      struct msg *next = msg->next;
+      kfree((char *)msg);
+      msg = next;
+    }
+    queue->used = 0;
+    queue->key = 0;
+    queue->msqid = 0;
+    queue->head = 0;
+    queue->tail = 0;
+    queue->msg_count = 0;
+    queue->marked_for_deletion = 0;
+  }
+  
   release(&msg_lock);
 
   return 0;
@@ -235,17 +303,39 @@ msgrcv(int msqid, void *msgp, unsigned msgsz, int msgtyp, int msgflg)
   // 查找消息队列
   queue = msg_find_by_id_locked(msqid);
   if(!queue) {
+    printf("msgrcv: queue not found for msqid %d\n", msqid);
+    release(&msg_lock);
+    return -1;
+  }
+  
+  // 检查队列是否已被标记为删除
+  if(queue->marked_for_deletion) {
+    printf("msgrcv: queue marked for deletion\n");
     release(&msg_lock);
     return -1;
   }
 
   // 增加引用计数
   queue->refcnt++;
+  printf("msgrcv: increased refcnt to %d\n", queue->refcnt);
 
   release(&msg_lock);
 
   // 获取队列锁
   acquire(&queue->lock);
+  
+  // 再次检查队列是否已被标记为删除
+  if(queue->marked_for_deletion) {
+    printf("msgrcv: queue marked for deletion after acquiring queue lock\n");
+    release(&queue->lock);
+    
+    acquire(&msg_lock);
+    queue->refcnt--;
+    printf("msgrcv: decreased refcnt to %d\n", queue->refcnt);
+    release(&msg_lock);
+    
+    return -1;
+  }
 
   // 查找符合条件的消息
   while(1) {
@@ -267,10 +357,12 @@ msgrcv(int msqid, void *msgp, unsigned msgsz, int msgtyp, int msgflg)
     if(msg) {
       // 检查缓冲区大小
       if(msgsz < msg->size && !(msgflg & IPC_NOWAIT)) {
+        printf("msgrcv: buffer too small for message\n");
         release(&queue->lock);
         
         acquire(&msg_lock);
         queue->refcnt--;
+        printf("msgrcv: decreased refcnt to %d\n", queue->refcnt);
         release(&msg_lock);
         
         return -1;
@@ -288,9 +380,11 @@ msgrcv(int msqid, void *msgp, unsigned msgsz, int msgtyp, int msgflg)
       }
       
       queue->msg_count--;
+      printf("msgrcv: removed message from queue, msg_count now %d\n", queue->msg_count);
 
       // 唤醒等待发送消息的进程
       wakeup(queue);
+      printf("msgrcv: woke up senders\n");
 
       release(&queue->lock);
 
@@ -301,6 +395,7 @@ msgrcv(int msqid, void *msgp, unsigned msgsz, int msgtyp, int msgflg)
         copy_size = msgsz;
       }
       memmove(mbuf->mtext, msg->data, copy_size);
+      printf("msgrcv: copied message of size %d, type %d\n", copy_size, (int)mbuf->mtype);
 
       // 释放消息内存
       kfree((char *)msg);
@@ -308,6 +403,7 @@ msgrcv(int msqid, void *msgp, unsigned msgsz, int msgtyp, int msgflg)
       // 减少引用计数
       acquire(&msg_lock);
       queue->refcnt--;
+      printf("msgrcv: decreased refcnt to %d\n", queue->refcnt);
       release(&msg_lock);
 
       return copy_size;
@@ -316,16 +412,36 @@ msgrcv(int msqid, void *msgp, unsigned msgsz, int msgtyp, int msgflg)
     // 如果没有找到消息
     if(msgflg & IPC_NOWAIT) {
       // 非阻塞模式，直接返回错误
+      printf("msgrcv: no message found, non-blocking mode, msgtyp=%d\n", msgtyp);
       release(&queue->lock);
       
       acquire(&msg_lock);
       queue->refcnt--;
+      printf("msgrcv: decreased refcnt to %d\n", queue->refcnt);
       release(&msg_lock);
       
       return -1;
     } else {
       // 阻塞模式，等待有消息
-      sleep(queue, &queue->lock);
+      printf("msgrcv: no message found, blocking mode, waiting for message, msgtyp=%d\n", msgtyp);
+      while(!queue->head && !queue->marked_for_deletion) {
+        sleep(queue, &queue->lock);
+      }
+      
+      // 检查是否因为队列被删除而被唤醒
+      if(queue->marked_for_deletion) {
+        printf("msgrcv: queue marked for deletion while waiting\n");
+        release(&queue->lock);
+        
+        acquire(&msg_lock);
+        queue->refcnt--;
+        printf("msgrcv: decreased refcnt to %d\n", queue->refcnt);
+        release(&msg_lock);
+        
+        return -1;
+      }
+      
+      printf("msgrcv: woken up from waiting\n");
     }
   }
 }
@@ -341,17 +457,26 @@ msgctl(int msqid, int cmd, void *buf)
   // 查找消息队列
   queue = msg_find_by_id_locked(msqid);
   if(!queue) {
+    printf("msgctl: queue not found for msqid %d\n", msqid);
     release(&msg_lock);
     return -1;
   }
 
   switch(cmd) {
     case IPC_RMID:
+      printf("msgctl: marking queue for deletion, refcnt=%d\n", queue->refcnt);
       // 标记为删除
       queue->marked_for_deletion = 1;
       
+      // 唤醒所有等待的进程
+      acquire(&queue->lock);
+      wakeup(queue);
+      release(&queue->lock);
+      printf("msgctl: woke up all waiting processes\n");
+      
       // 如果没有其他进程在使用，则清理资源
-      if(queue->refcnt <= 1) {
+      if(queue->refcnt == 0) {
+        printf("msgctl: cleaning up queue immediately\n");
         // 删除队列中的所有消息
         struct msg *msg = queue->head;
         while(msg) {
@@ -363,6 +488,7 @@ msgctl(int msqid, int cmd, void *buf)
         // 重置队列
         queue->used = 0;
         queue->refcnt = 0;
+        queue->key = 0;
         queue->msqid = 0;
         queue->head = 0;
         queue->tail = 0;
@@ -376,6 +502,7 @@ msgctl(int msqid, int cmd, void *buf)
       break;
       
     default:
+      printf("msgctl: unsupported command %d\n", cmd);
       release(&msg_lock);
       return -1;
   }
