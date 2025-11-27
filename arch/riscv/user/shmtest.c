@@ -2,7 +2,7 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 #include "kernel/fcntl.h"
-#include "user/sem.h"
+#include "user/ipc.h"
 
 // 字符串连接函数
 void strcat(char *dest, const char *src) {

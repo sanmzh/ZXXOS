@@ -6,6 +6,7 @@
 #include "proc.h"
 #include "defs.h"
 #include "syscall.h"
+#include "ipc.h"
 
 // sys_shmget: 创建或获取共享内存标识符
 uint64

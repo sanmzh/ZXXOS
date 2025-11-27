@@ -61,22 +61,12 @@ int statistics(void*, int);
 void *mmap(void *addr, int length, int prot, int flags, int fd, int offset);
 int munmap(void *addr, int length);
 
-// 共享内存相关系统调用
-int shmget(int key, int size, int shmflg);
-void *shmat(int shmid, const void *addr, int shmflg);
-int shmdt(const void *addr);
-int shmctl(int shmid, int cmd, void *buf);
-
-// 信号量相关系统调用
-struct sembuf;
-struct semid_ds;
-int semget(int key, int nsems, int semflg);
-int semop(int semid, struct sembuf *sops, unsigned nsops);
-int semctl(int semid, int semnum, int cmd, void *arg);
+#include "ipc.h"
 
 // printf.c
 void fprintf(int, const char*, ...) __attribute__ ((format (printf, 2, 3)));
 void printf(const char*, ...) __attribute__ ((format (printf, 1, 2)));
+int sprintf(char *buf, const char *fmt, ...);
 
 // umalloc.c
 void* malloc(uint);
