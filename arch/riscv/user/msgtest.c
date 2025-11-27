@@ -7,10 +7,6 @@
 #define NUM_MSGS 50
 #define NUM_PROCS 10
 
-struct msgbuf {
-  long mtype;
-  char mtext[512];  // 增加缓冲区大小以支持更大的消息
-};
 
 // 新测试函数声明
 void test_variable_size_messages();
@@ -23,7 +19,9 @@ void
 test_basic_msg_queue()
 {
   int msgid;
-  struct msgbuf msg;
+  struct msgbuf *msg;
+  const char *text = "hello world";
+  int text_len = strlen(text);
 
   printf("=== 基本消息队列测试 ===\n");
   
@@ -35,23 +33,41 @@ test_basic_msg_queue()
   }
   printf("msgid = %d\n", msgid);
 
-  // 发送消息
-  msg.mtype = 1;
-  strcpy(msg.mtext, "hello world");
-  if(msgsnd(msgid, &msg, strlen(msg.mtext), 0) < 0) {
-    printf("msgsnd 失败\n");
+  // 为消息分配足够的内存
+  msg = (struct msgbuf *)malloc(sizeof(struct msgbuf) + text_len);
+  if (!msg) {
+    printf("内存分配失败\n");
     exit(1);
   }
-  printf("发送消息: %s\n", msg.mtext);
+
+  // 发送消息
+  msg->mtype = 1;
+  strcpy(msg->mtext, text);
+  if(msgsnd(msgid, msg, text_len, 0) < 0) {
+    printf("msgsnd 失败\n");
+    free(msg);
+    exit(1);
+  }
+  printf("发送消息: %s\n", msg->mtext);
+  free(msg);
+
+  // 为接收消息分配足够的内存
+  msg = (struct msgbuf *)malloc(sizeof(struct msgbuf) + MSGSIZE);
+  if (!msg) {
+    printf("内存分配失败\n");
+    exit(1);
+  }
 
   // 接收消息
-  memset(&msg, 0, sizeof(msg));
-  int len = msgrcv(msgid, &msg, MSGSIZE, 1, 0);
+  memset(msg, 0, sizeof(struct msgbuf) + MSGSIZE);
+  int len = msgrcv(msgid, msg, MSGSIZE, 1, 0);
   if(len < 0) {
     printf("msgrcv 失败\n");
+    free(msg);
     exit(1);
   }
-  printf("接收消息: %s (长度=%d)\n", msg.mtext, len);
+  printf("接收消息: %s (长度=%d)\n", msg->mtext, len);
+  free(msg);
 
   // 删除消息队列
   if(msgctl(msgid, 1, 0) < 0) { // IPC_RMID
@@ -65,7 +81,7 @@ void
 test_multi_message()
 {
   int msgid;
-  struct msgbuf msg;
+  struct msgbuf *msg;
 
   printf("\n=== 多消息测试 ===\n");
   
@@ -79,27 +95,45 @@ test_multi_message()
 
   // 发送多个消息
   for(int i = 0; i < 5; i++) {
-    msg.mtype = i + 1;
-    strcpy(msg.mtext, "message ");
-    int len = strlen(msg.mtext);
-    msg.mtext[len] = '0' + i;
-    msg.mtext[len + 1] = '\0';
-    if(msgsnd(msgid, &msg, strlen(msg.mtext), 0) < 0) {
-      printf("msgsnd 失败\n");
+    // 为消息分配足够的内存
+    msg = (struct msgbuf *)malloc(sizeof(struct msgbuf) + 20); // 足够容纳 "message " + 数字 + null
+    if (!msg) {
+      printf("内存分配失败\n");
       exit(1);
     }
-    printf("发送消息: %s\n", msg.mtext);
+    
+    msg->mtype = i + 1;
+    strcpy(msg->mtext, "message ");
+    int len = strlen(msg->mtext);
+    msg->mtext[len] = '0' + i;
+    msg->mtext[len + 1] = '\0';
+    if(msgsnd(msgid, msg, strlen(msg->mtext), 0) < 0) {
+      printf("msgsnd 失败\n");
+      free(msg);
+      exit(1);
+    }
+    printf("发送消息: %s\n", msg->mtext);
+    free(msg);
   }
 
   // 接收多个消息
   for(int i = 1; i <= 5; i++) {
-    memset(&msg, 0, sizeof(msg));
-    int len = msgrcv(msgid, &msg, MSGSIZE, i, 0);
-    if(len < 0) {
-      printf("msgrcv 失败\n");
+    // 为消息分配足够的内存
+    msg = (struct msgbuf *)malloc(sizeof(struct msgbuf) + MSGSIZE);
+    if (!msg) {
+      printf("内存分配失败\n");
       exit(1);
     }
-    printf("接收消息: %s (类型=%d)\n", msg.mtext, (int)msg.mtype);
+    
+    memset(msg, 0, sizeof(struct msgbuf) + MSGSIZE);
+    int len = msgrcv(msgid, msg, MSGSIZE, i, 0);
+    if(len < 0) {
+      printf("msgrcv 失败\n");
+      free(msg);
+      exit(1);
+    }
+    printf("接收消息: %s (类型=%d)\n", msg->mtext, (int)msg->mtype);
+    free(msg);
   }
 
   // 删除消息队列
@@ -114,7 +148,7 @@ void
 test_fork()
 {
   int msgid;
-  struct msgbuf msg;
+  struct msgbuf *msg;
 
   printf("\n=== 进程间通信测试 ===\n");
   
@@ -134,12 +168,21 @@ test_fork()
 
   if(pid == 0) {
     // 子进程 - 发送消息
-    msg.mtype = 1;
-    strcpy(msg.mtext, "hello from child");
-    if(msgsnd(msgid, &msg, strlen(msg.mtext), 0) < 0) {
-      printf("child: msgsnd 失败\n");
+    // 为消息分配足够的内存
+    msg = (struct msgbuf *)malloc(sizeof(struct msgbuf) + 20); // 足够容纳 "hello from child"
+    if (!msg) {
+      printf("child: 内存分配失败\n");
       exit(1);
     }
+    
+    msg->mtype = 1;
+    strcpy(msg->mtext, "hello from child");
+    if(msgsnd(msgid, msg, strlen(msg->mtext), 0) < 0) {
+      printf("child: msgsnd 失败\n");
+      free(msg);
+      exit(1);
+    }
+    free(msg);
     exit(0);
   } else {
     // 父进程 - 接收消息
@@ -153,7 +196,7 @@ test_fork()
     // 等待子进程结束后再输出，避免竞争
     wait(0);
     
-    printf("parent: 接收消息: %s (长度=%d)\n", msg.mtext, len);
+    printf("parent: 接收消息: %s (长度=%d)\n", msg->mtext, len);
     
     // 删除消息队列
     if(msgctl(msgid, 1, 0) < 0) { // IPC_RMID
@@ -339,7 +382,6 @@ void
 test_variable_size_messages()
 {
   int msgid;
-  struct msgbuf msg;
 
   // 创建消息队列
   msgid = msgget(0x5000, 0x01000); // IPC_CREAT
@@ -354,42 +396,63 @@ test_variable_size_messages()
   int num_sizes = sizeof(sizes) / sizeof(sizes[0]);
 
   for (int i = 0; i < num_sizes; i++) {
-    // 发送消息
-    msg.mtype = i + 1;
-    memset(msg.mtext, 'A' + i, sizes[i]);
-    msg.mtext[sizes[i] - 1] = '\0';
-
-    printf("发送大小为 %d 的消息，类型 %d\n", sizes[i], (int)msg.mtype);
-    if (msgsnd(msgid, &msg, sizes[i], 0) < 0) {
-      printf("msgsnd 失败，消息大小 %d\n", sizes[i]);
+    // 为变长消息分配足够的内存
+    struct msgbuf *msg = (struct msgbuf *)malloc(sizeof(struct msgbuf) + sizes[i] - 1);
+    if (!msg) {
+      printf("内存分配失败\n");
       exit(1);
     }
+    
+    // 发送消息
+    msg->mtype = i + 1;
+    memset(msg->mtext, 'A' + i, sizes[i]);
+    msg->mtext[sizes[i] - 1] = '\0';
+
+    printf("发送大小为 %d 的消息，类型 %d\n", sizes[i], (int)msg->mtype);
+    if (msgsnd(msgid, msg, sizes[i], 0) < 0) {
+      printf("msgsnd 失败，消息大小 %d\n", sizes[i]);
+      free(msg);
+      exit(1);
+    }
+    
+    free(msg);
   }
 
   // 接收消息
   for (int i = 0; i < num_sizes; i++) {
-    memset(&msg, 0, sizeof(msg));
-    int len = msgrcv(msgid, &msg, sizeof(msg.mtext), i + 1, 0);
+    // 为接收消息分配足够的内存
+    struct msgbuf *msg = (struct msgbuf *)malloc(sizeof(struct msgbuf) + sizes[i] - 1);
+    if (!msg) {
+      printf("内存分配失败\n");
+      exit(1);
+    }
+    
+    memset(msg, 0, sizeof(struct msgbuf) + sizes[i] - 1);
+    int len = msgrcv(msgid, msg, sizes[i], i + 1, 0);
     if (len < 0) {
       printf("msgrcv 失败，消息类型 %d\n", i + 1);
+      free(msg);
       exit(1);
     }
 
     // 验证消息大小
     if (len != sizes[i]) {
       printf("消息大小不匹配，期望 %d，实际 %d\n", sizes[i], len);
+      free(msg);
       exit(1);
     }
 
     // 验证消息内容
     for (int j = 0; j < len - 1; j++) {
-      if (msg.mtext[j] != 'A' + i) {
-        printf("消息内容不匹配，位置 %d，期望 %c，实际 %c\n", j, 'A' + i, msg.mtext[j]);
+      if (msg->mtext[j] != 'A' + i) {
+        printf("消息内容不匹配，位置 %d，期望 %c，实际 %c\n", j, 'A' + i, msg->mtext[j]);
+        free(msg);
         exit(1);
       }
     }
 
-    printf("成功接收大小为 %d 的消息，类型 %d\n", len, (int)msg.mtype);
+    printf("成功接收大小为 %d 的消息，类型 %d\n", len, (int)msg->mtype);
+    free(msg);
   }
 
   // 删除消息队列
@@ -406,7 +469,7 @@ void
 test_mixed_type_messages()
 {
   int msgid;
-  struct msgbuf msg;
+  struct msgbuf *msg;
 
   // 创建消息队列
   msgid = msgget(0x5001, 0x01000); // IPC_CREAT
@@ -421,91 +484,147 @@ test_mixed_type_messages()
   int num_types = sizeof(types) / sizeof(types[0]);
 
   for (int i = 0; i < num_types; i++) {
-    msg.mtype = types[i];
-    strcpy(msg.mtext, "message");
-    msg.mtext[7] = '0' + i;
-    msg.mtext[8] = '\0';
-
-    printf("发送类型为 %d 的消息\n", types[i]);
-    if (msgsnd(msgid, &msg, strlen(msg.mtext), 0) < 0) {
-      printf("msgsnd 失败，消息类型 %d\n", types[i]);
+    // 为消息分配足够的内存
+    msg = (struct msgbuf *)malloc(sizeof(struct msgbuf) + 10); // 足够容纳 "message" + 数字 + null
+    if (!msg) {
+      printf("内存分配失败\n");
       exit(1);
     }
+    
+    msg->mtype = types[i];
+    strcpy(msg->mtext, "message");
+    msg->mtext[7] = '0' + i;
+    msg->mtext[8] = '\0';
+
+    printf("发送类型为 %d 的消息\n", types[i]);
+    if (msgsnd(msgid, msg, strlen(msg->mtext), 0) < 0) {
+      printf("msgsnd 失败，消息类型 %d\n", types[i]);
+      free(msg);
+      exit(1);
+    }
+    free(msg);
   }
 
   // 接收特定类型的消息
   for (int i = 0; i < num_types; i++) {
-    memset(&msg, 0, sizeof(msg));
-    int len = msgrcv(msgid, &msg, sizeof(msg.mtext), types[i], 0);
+    // 为消息分配足够的内存
+    msg = (struct msgbuf *)malloc(sizeof(struct msgbuf) + 10); // 足够容纳 "message" + 数字 + null
+    if (!msg) {
+      printf("内存分配失败\n");
+      exit(1);
+    }
+    
+    memset(msg, 0, sizeof(struct msgbuf) + 10);
+    int len = msgrcv(msgid, msg, 10, types[i], 0);
     if (len < 0) {
       printf("msgrcv 失败，消息类型 %d\n", types[i]);
+      free(msg);
       exit(1);
     }
 
     // 验证消息类型
-    if (msg.mtype != types[i]) {
-      printf("消息类型不匹配，期望 %d，实际 %d\n", types[i], (int)msg.mtype);
+    if (msg->mtype != types[i]) {
+      printf("消息类型不匹配，期望 %d，实际 %d\n", types[i], (int)msg->mtype);
+      free(msg);
       exit(1);
     }
 
-    printf("成功接收类型为 %d 的消息: %s\n", (int)msg.mtype, msg.mtext);
+    printf("成功接收类型为 %d 的消息: %s\n", (int)msg->mtype, msg->mtext);
+    free(msg);
   }
 
   // 测试接收任意类型的消息 (msgtyp = 0)
   // 先发送几条消息
   for (int i = 0; i < 3; i++) {
-    msg.mtype = 10 + i;
-    strcpy(msg.mtext, "any_type");
-    msg.mtext[8] = '0' + i;
-    msg.mtext[9] = '\0';
-
-    if (msgsnd(msgid, &msg, strlen(msg.mtext), 0) < 0) {
-      printf("msgsnd 失败，消息类型 %d\n", (int)msg.mtype);
+    // 为消息分配足够的内存
+    msg = (struct msgbuf *)malloc(sizeof(struct msgbuf) + 11); // 足够容纳 "any_type" + 数字 + null
+    if (!msg) {
+      printf("内存分配失败\n");
       exit(1);
     }
+    
+    msg->mtype = 10 + i;
+    strcpy(msg->mtext, "any_type");
+    msg->mtext[8] = '0' + i;
+    msg->mtext[9] = '\0';
+
+    if (msgsnd(msgid, msg, strlen(msg->mtext), 0) < 0) {
+      printf("msgsnd 失败，消息类型 %d\n", (int)msg->mtype);
+      free(msg);
+      exit(1);
+    }
+    free(msg);
   }
 
   // 接收任意类型的消息
   for (int i = 0; i < 3; i++) {
-    memset(&msg, 0, sizeof(msg));
-    int len = msgrcv(msgid, &msg, sizeof(msg.mtext), 0, 0);
+    // 为消息分配足够的内存
+    msg = (struct msgbuf *)malloc(sizeof(struct msgbuf) + 11); // 足够容纳 "any_type" + 数字 + null
+    if (!msg) {
+      printf("内存分配失败\n");
+      exit(1);
+    }
+    
+    memset(msg, 0, sizeof(struct msgbuf) + 11);
+    int len = msgrcv(msgid, msg, 11, 0, 0);
     if (len < 0) {
       printf("msgrcv 失败，接收任意类型消息\n");
+      free(msg);
       exit(1);
     }
 
-    printf("成功接收任意类型消息，类型 %d: %s\n", (int)msg.mtype, msg.mtext);
+    printf("成功接收任意类型消息，类型 %d: %s\n", (int)msg->mtype, msg->mtext);
+    free(msg);
   }
 
   // 测试接收小于等于指定类型的消息 (msgtyp < 0)
   // 先发送几条消息
   for (int i = 0; i < 3; i++) {
-    msg.mtype = 20 + i;
-    strcpy(msg.mtext, "less_type");
-    msg.mtext[9] = '0' + i;
-    msg.mtext[10] = '\0';
-
-    if (msgsnd(msgid, &msg, strlen(msg.mtext), 0) < 0) {
-      printf("msgsnd 失败，消息类型 %d\n", (int)msg.mtype);
+    // 为消息分配足够的内存
+    msg = (struct msgbuf *)malloc(sizeof(struct msgbuf) + 12); // 足够容纳 "less_type" + 数字 + null
+    if (!msg) {
+      printf("内存分配失败\n");
       exit(1);
     }
+    
+    msg->mtype = 20 + i;
+    strcpy(msg->mtext, "less_type");
+    msg->mtext[9] = '0' + i;
+    msg->mtext[10] = '\0';
+
+    if (msgsnd(msgid, msg, strlen(msg->mtext), 0) < 0) {
+      printf("msgsnd 失败，消息类型 %d\n", (int)msg->mtype);
+      free(msg);
+      exit(1);
+    }
+    free(msg);
   }
 
   // 接收小于等于21的消息
   for (int i = 0; i < 2; i++) {
-    memset(&msg, 0, sizeof(msg));
-    int len = msgrcv(msgid, &msg, sizeof(msg.mtext), -21, 0);
+    // 为消息分配足够的内存
+    msg = (struct msgbuf *)malloc(sizeof(struct msgbuf) + 12); // 足够容纳 "less_type" + 数字 + null
+    if (!msg) {
+      printf("内存分配失败\n");
+      exit(1);
+    }
+    
+    memset(msg, 0, sizeof(struct msgbuf) + 12);
+    int len = msgrcv(msgid, msg, 12, -21, 0);
     if (len < 0) {
       printf("msgrcv 失败，接收小于等于21类型的消息\n");
+      free(msg);
       exit(1);
     }
 
-    if (msg.mtype > 21) {
-      printf("接收到类型大于21的消息: %d\n", (int)msg.mtype);
+    if (msg->mtype > 21) {
+      printf("接收到类型大于21的消息: %d\n", (int)msg->mtype);
+      free(msg);
       exit(1);
     }
 
-    printf("成功接收小于等于21类型的消息，类型 %d: %s\n", (int)msg.mtype, msg.mtext);
+    printf("成功接收小于等于21类型的消息，类型 %d: %s\n", (int)msg->mtype, msg->mtext);
+    free(msg);
   }
 
   // 删除消息队列
@@ -592,7 +711,7 @@ void
 test_queue_capacity()
 {
   int msgid;
-  struct msgbuf msg;
+  struct msgbuf *msg;
 
   // 创建消息队列
   msgid = msgget(0x5003, 0x01000); // IPC_CREAT
@@ -605,12 +724,21 @@ test_queue_capacity()
   // 填满队列
   int count = 0;
   for (int i = 0; i < 16; i++) { // MAX_MSG_QUEUE_SIZE = 16
-    msg.mtype = 1;
-    sprintf(msg.mtext, "message_%d", i);
-    if (msgsnd(msgid, &msg, strlen(msg.mtext), 0) < 0) {
-      printf("填充队列失败在消息 %d\n", i);
+    // 为消息分配足够的内存
+    msg = (struct msgbuf *)malloc(sizeof(struct msgbuf) + 20); // 足够容纳 "message_" + 数字 + null
+    if (!msg) {
+      printf("内存分配失败\n");
       exit(1);
     }
+    
+    msg->mtype = 1;
+    sprintf(msg->mtext, "message_%d", i);
+    if (msgsnd(msgid, msg, strlen(msg->mtext), 0) < 0) {
+      printf("填充队列失败在消息 %d\n", i);
+      free(msg);
+      exit(1);
+    }
+    free(msg);
     count++;
   }
   printf("成功填充队列，共 %d 条消息\n", count);
@@ -624,25 +752,61 @@ test_queue_capacity()
 
   if (pid == 0) {
     // 子进程：尝试发送第17条消息
-    msg.mtype = 1;
-    strcpy(msg.mtext, "overflow_message");
+    // 为消息分配足够的内存
+    msg = (struct msgbuf *)malloc(sizeof(struct msgbuf) + 32); // 足够容纳 "overflow_message"
+    if (!msg) {
+      printf("子进程内存分配失败\n");
+      exit(1);
+    }
+    
+    msg->mtype = 1;
+    strcpy(msg->mtext, "overflow_message");
     printf("子进程尝试发送第17条消息（应该阻塞）\n");
-    if (msgsnd(msgid, &msg, strlen(msg.mtext), 0) < 0) {
+    if (msgsnd(msgid, msg, strlen(msg->mtext), 0) < 0) {
       printf("子进程发送消息失败\n");
+      free(msg);
       exit(1);
     }
     printf("子进程成功发送第17条消息\n");
+    free(msg);
     exit(0);
   } else {
     // 父进程：等待一会儿，然后接收一条消息
     sleep(1);
-    memset(&msg, 0, sizeof(msg));
-    int len = msgrcv(msgid, &msg, sizeof(msg.mtext), 0, 0);
-    if (len < 0) {
-      printf("父进程接收消息失败\n");
+    // 先接收一条旧消息，为子进程腾出空间
+    msg = (struct msgbuf *)malloc(sizeof(struct msgbuf) + 32); // 足够容纳 "message_" + 数字 + null
+    if (!msg) {
+      printf("父进程内存分配失败\n");
       exit(1);
     }
-    printf("父进程接收消息: %s\n", msg.mtext);
+    
+    memset(msg, 0, sizeof(struct msgbuf) + 32);
+    int len = msgrcv(msgid, msg, 32, 0, IPC_NOWAIT);
+    if (len < 0) {
+      printf("父进程接收消息失败\n");
+      free(msg);
+      exit(1);
+    }
+    printf("父进程接收旧消息: %s\n", msg->mtext);
+    free(msg);
+    
+    // 再接收子进程发送的新消息
+    sleep(1); // 确保子进程有时间发送消息
+    msg = (struct msgbuf *)malloc(sizeof(struct msgbuf) + 32); // 足够容纳 "overflow_message"
+    if (!msg) {
+      printf("父进程内存分配失败\n");
+      exit(1);
+    }
+    
+    memset(msg, 0, sizeof(struct msgbuf) + 32);
+    len = msgrcv(msgid, msg, 32, 0, IPC_NOWAIT);
+    if (len < 0) {
+      printf("父进程接收新消息失败\n");
+      free(msg);
+      exit(1);
+    }
+    printf("父进程接收新消息: %s\n", msg->mtext);
+    free(msg);
 
     // 等待子进程结束
     int status;
@@ -667,7 +831,7 @@ void
 test_message_ordering()
 {
   int msgid;
-  struct msgbuf msg;
+  struct msgbuf *msg;
 
   // 创建消息队列
   msgid = msgget(0x5004, 0x01000); // IPC_CREAT
@@ -679,61 +843,99 @@ test_message_ordering()
 
   // 发送多条相同类型的消息
   for (int i = 0; i < 10; i++) {
-    msg.mtype = 1;
-    sprintf(msg.mtext, "message_%d", i);
-    if (msgsnd(msgid, &msg, strlen(msg.mtext), 0) < 0) {
-      printf("msgsnd 失败，消息 %d\n", i);
+    // 为消息分配足够的内存
+    msg = (struct msgbuf *)malloc(sizeof(struct msgbuf) + 20); // 足够容纳 "message_" + 数字 + null
+    if (!msg) {
+      printf("内存分配失败\n");
       exit(1);
     }
+    
+    msg->mtype = 1;
+    sprintf(msg->mtext, "message_%d", i);
+    if (msgsnd(msgid, msg, strlen(msg->mtext), 0) < 0) {
+      printf("msgsnd 失败，消息 %d\n", i);
+      free(msg);
+      exit(1);
+    }
+    free(msg);
   }
 
   // 接收消息并验证顺序
   for (int i = 0; i < 10; i++) {
-    memset(&msg, 0, sizeof(msg));
-    int len = msgrcv(msgid, &msg, sizeof(msg.mtext), 1, 0);
+    // 为消息分配足够的内存
+    msg = (struct msgbuf *)malloc(sizeof(struct msgbuf) + 20); // 足够容纳 "message_" + 数字 + null
+    if (!msg) {
+      printf("内存分配失败\n");
+      exit(1);
+    }
+    
+    memset(msg, 0, sizeof(struct msgbuf) + 20);
+    int len = msgrcv(msgid, msg, 20, 1, 0);
     if (len < 0) {
       printf("msgrcv 失败，消息 %d\n", i);
+      free(msg);
       exit(1);
     }
 
     // 验证消息顺序
     char expected[16];
     sprintf(expected, "message_%d", i);
-    if (strcmp(msg.mtext, expected) != 0) {
-      printf("消息顺序不正确，期望 %s，实际 %s\n", expected, msg.mtext);
+    if (strcmp(msg->mtext, expected) != 0) {
+      printf("消息顺序不正确，期望 %s，实际 %s\n", expected, msg->mtext);
+      free(msg);
       exit(1);
     }
 
-    printf("成功接收消息 %d: %s\n", i, msg.mtext);
+    printf("成功接收消息 %d: %s\n", i, msg->mtext);
+    free(msg);
   }
 
   // 测试不同类型消息的顺序
   // 先发送不同类型的消息
   for (int i = 0; i < 5; i++) {
-    msg.mtype = i + 1;
-    sprintf(msg.mtext, "type_%d_msg_%d", i + 1, i + 1);
-    if (msgsnd(msgid, &msg, strlen(msg.mtext), 0) < 0) {
-      printf("msgsnd 失败，消息 %d\n", i);
+    // 为消息分配足够的内存
+    msg = (struct msgbuf *)malloc(sizeof(struct msgbuf) + 20); // 足够容纳 "type_X_msg_X"
+    if (!msg) {
+      printf("内存分配失败\n");
       exit(1);
     }
+    
+    msg->mtype = i + 1;
+    sprintf(msg->mtext, "type_%d_msg_%d", i + 1, i + 1);
+    if (msgsnd(msgid, msg, strlen(msg->mtext), 0) < 0) {
+      printf("msgsnd 失败，消息 %d\n", i);
+      free(msg);
+      exit(1);
+    }
+    free(msg);
   }
 
   // 按类型顺序接收
   for (int i = 0; i < 5; i++) {
-    memset(&msg, 0, sizeof(msg));
-    int len = msgrcv(msgid, &msg, sizeof(msg.mtext), i + 1, 0);
+    // 为消息分配足够的内存
+    msg = (struct msgbuf *)malloc(sizeof(struct msgbuf) + 20); // 足够容纳 "type_X_msg_X"
+    if (!msg) {
+      printf("内存分配失败\n");
+      exit(1);
+    }
+    
+    memset(msg, 0, sizeof(struct msgbuf) + 20);
+    int len = msgrcv(msgid, msg, 20, i + 1, 0);
     if (len < 0) {
       printf("msgrcv 失败，类型 %d\n", i + 1);
+      free(msg);
       exit(1);
     }
 
     // 验证消息类型
-    if (msg.mtype != i + 1) {
-      printf("消息类型不正确，期望 %d，实际 %d\n", i + 1, (int)msg.mtype);
+    if (msg->mtype != i + 1) {
+      printf("消息类型不正确，期望 %d，实际 %d\n", i + 1, (int)msg->mtype);
+      free(msg);
       exit(1);
     }
 
-    printf("成功接收类型 %d 消息: %s\n", (int)msg.mtype, msg.mtext);
+    printf("成功接收类型 %d 消息: %s\n", (int)msg->mtype, msg->mtext);
+    free(msg);
   }
 
   // 删除消息队列

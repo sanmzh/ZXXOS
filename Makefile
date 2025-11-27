@@ -52,12 +52,12 @@ OBJS += \
   $K/stats.o \
   $K/sprintf.o \
   $K/kernelvec.o \
-  $K/shm.o \
-  $K/sysshm.o \
-  $K/sem.o \
-  $K/syssem.o \
-  $K/sysmsg.o \
-  $K/msg.o
+  $K/ipc/systemV/shm.o \
+  $K/ipc/systemV/sem.o \
+  $K/ipc/systemV/msg.o \
+  $K/ipc/systemV/sysshm.o \
+  $K/ipc/systemV/syssem.o \
+  $K/ipc/systemV/sysmsg.o
 endif
 
 ifeq ($(ARCH),loongarch)
@@ -172,9 +172,11 @@ $K/kernel: $(KERNEL_DEPS)
 	$(OBJDUMP) -t $K/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $K/kernel.sym
 
 $K/%.o:  $(AR)/$A/$K/%.S
+	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -g -c -o $@ $<
 
 $K/%.o:  $(AR)/$A/$K/%.c
+	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $K/%.o: $K/%.c
@@ -182,6 +184,7 @@ $K/%.o: $K/%.c
 
 ifeq ($(ARCH),riscv)
 $K/start.o:  $(AR)/$A/$K/start.c
+	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c -o $@ $<
 tags: $(OBJS)
 	etags riscv/kernel/*.S riscv/kernel/*.c
@@ -224,6 +227,7 @@ $U/_%:  $(USER_DEPS)
 $U/usys.S :  $(AR)/$A/$U/usys.pl
 	perl  $(AR)/$A/$U/usys.pl > $U/usys.S
 $U/usys.o : $U/usys.S
+	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c -o $U/usys.o $U/usys.S
 $U/_forktest: $U/forktest.o $(ULIB)
 	# forktest has less library code linked in - needs to be small
@@ -231,9 +235,11 @@ $U/_forktest: $U/forktest.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $U/_forktest $U/forktest.o $U/ulib.o $U/usys.o
 	$(OBJDUMP) -S $U/_forktest > $U/forktest.asm
 $U/%.o:  $(AR)/$A/$U/%.c
+	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $U/%.o:  $(AR)/$A/$U/%.S
+	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 ifeq ($(ARCH),riscv)

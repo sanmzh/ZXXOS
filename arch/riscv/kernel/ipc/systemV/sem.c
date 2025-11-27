@@ -7,6 +7,7 @@
 #include "proc.h"
 #include "defs.h"
 #include "syscall.h"
+#include "ipc.h"
 
 // 信号量数组
 struct sem_set sem_sets[MAX_SEM_SETS];

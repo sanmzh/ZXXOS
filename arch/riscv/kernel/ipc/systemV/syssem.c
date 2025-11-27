@@ -7,6 +7,7 @@
 #include "proc.h"
 #include "defs.h"
 #include "syscall.h"
+#include "ipc.h"
 
 // sys_semget: 创建或获取信号量集标识符
 uint64

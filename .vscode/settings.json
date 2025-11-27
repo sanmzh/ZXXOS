@@ -8,7 +8,8 @@
 		"sysnum.h": "c",
 		"spinlock.h": "c",
 		"sleeplock.h": "c",
-		"param.h": "c"
+		"param.h": "c",
+		"ipc.h": "c"
 	},
 	"Codegeex.RepoIndex": true
 }

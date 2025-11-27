@@ -6,6 +6,7 @@
 #include "proc.h"
 #include "defs.h"
 #include "syscall.h"
+#include "ipc.h"
 
 // 共享内存区域数组
 struct shm_region shm_regions[MAX_SHM_REGIONS];

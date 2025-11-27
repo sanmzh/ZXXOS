@@ -16,7 +16,7 @@
 #include "kernel/types.h"
 #include "kernel/stat.h"
 #include "user/user.h"
-#include "user/sem.h"
+#include "user/ipc.h"
 
 // 测试信号量的基本功能
 void test_basic_sem() {

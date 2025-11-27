@@ -7,6 +7,7 @@
 #include "defs.h"
 #include "syscall.h"
 #include "fcntl.h"
+#include "ipc.h"
 
 // System call to get a message queue
 uint64

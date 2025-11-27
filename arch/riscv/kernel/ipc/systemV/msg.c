@@ -6,6 +6,7 @@
 #include "proc.h"
 #include "defs.h"
 #include "syscall.h"
+#include "ipc.h"
 
 // 消息队列数组
 struct msg_queue msg_queues[MAX_MSG_QUEUES];
