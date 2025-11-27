@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "sysinfo.h"
 
 uint64
 sys_exit(void)
@@ -15,6 +16,25 @@ sys_exit(void)
     return -1;
   exit(n);
   return 0;  // not reached
+}
+
+// 获取系统信息
+uint64
+sys_sysinfo(void)
+{
+  struct sysinfo info;
+  freebytes(&info.freemem);
+  proccount(&info.nproc);
+
+  // 获取虚拟地址
+  uint64 dstva;
+  argaddr(0, &dstva);
+
+  // 将 info 结构体从内核空间复制到用户空间
+  if(copyout(myproc()->pagetable, dstva, (char *)&info, sizeof(info)) < 0)
+    return -1;
+
+  return 0;
 }
 
 uint64
@@ -44,11 +64,11 @@ sys_sbrk(void)
   int addr;
   int n;
 
-  if(argint(0, &n) < 0)
-    return -1;
+  if(argint(0, &n) < 0){
+    return -1;}
   addr = myproc()->sz;
-  if(growproc(n) < 0)
-    return -1;
+  if(growproc(n) < 0){
+    return -1;}
   return addr;
 }
 

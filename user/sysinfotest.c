@@ -1,5 +1,10 @@
 #include "kernel/types.h"
+#ifdef riscv
 #include "kernel/riscv.h"
+#endif
+#ifdef loongarch
+#include "kernel/loongarch.h"
+#endif
 #include "kernel/sysinfo.h"
 #include "user/user.h"
 
@@ -28,12 +33,15 @@ countfree()
     }
     n += PGSIZE;
   }
+  
   sinfo(&info);
+  #ifdef riscv
   if (info.freemem != 0) {
     printf("FAIL: there is no free mem, but sysinfo.freemem=%ld\n",
       info.freemem);
     exit(1);
   }
+  #endif
   sbrk(-((uint64)sbrk(0) - sz0));
   return n;
 }

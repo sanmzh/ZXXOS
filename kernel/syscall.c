@@ -123,10 +123,10 @@ extern uint64 sys_link(void);
 extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
 extern uint64 sys_trace(void);
+extern uint64 sys_sysinfo(void);
 #ifdef riscv
 extern uint64 sys_pause(void);
 
-extern uint64 sys_sysinfo(void);
 // page table
 extern uint64 sys_kpgtbl(void);
 // LAB_NET
@@ -182,9 +182,9 @@ static uint64 (*syscalls[])(void) = {
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
 [SYS_trace]   sys_trace,
+[SYS_sysinfo] sys_sysinfo,
 #ifdef riscv
 [SYS_pause]   sys_pause,
-[SYS_sysinfo] sys_sysinfo,
 
 // LAB_PGTBL
 [SYS_kpgtbl]  sys_kpgtbl,
@@ -243,9 +243,9 @@ const char* syscall_names[] = {
 [SYS_link]    "link",
 [SYS_mkdir]   "mkdir",
 [SYS_close]   "close",
+[SYS_sysinfo] "sysinfo",
 #ifdef riscv 
 [SYS_pause]   "pause",
-[SYS_sysinfo] "sysinfo",
 #endif
 #ifdef loongarch
 [SYS_sleep]   "sleep",
