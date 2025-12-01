@@ -54,6 +54,7 @@ OBJS += \
   $N/util.o \
   $N/net.o \
   $N/ether.o \
+  $P/virtio_net.o \
   $P/std.o \
   $K/e1000.o \
   $K/net.o \
@@ -312,11 +313,24 @@ ifndef CPUS
 CPUS := 4
 endif
 
+TAPDEV=tap0
+TAPADDR=192.0.2.1/24
+
 QEMUOPTS = -machine virt -bios none -kernel $K/kernel -m 128M -smp $(CPUS) -nographic
 QEMUOPTS += -global virtio-mmio.force-legacy=false
 QEMUOPTS += -drive file=fs.img,if=none,format=raw,id=x0
 QEMUOPTS += -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
+QEMUOPTS += -netdev tap,ifname=$(TAPDEV),id=en0
+QEMUOPTS += -device virtio-net-device,netdev=en0,csum=off,gso=off,guest_csum=off,bus=virtio-mmio-bus.1
 
+tap:
+	@ip addr show $(TAPDEV) 2>/dev/null || (echo "Create '$(TAPDEV)'"; \
+		sudo ip tuntap add mode tap user $(USER) name $(TAPDEV); \
+		sudo sysctl -w net.ipv6.conf.$(TAPDEV).disable_ipv6=1; \
+		sudo ip addr add $(TAPADDR) dev $(TAPDEV); \
+		sudo ip link set $(TAPDEV) up; \
+		ip addr show $(TAPDEV); \
+	)
 # LAB_NET
 FWDPORT1 = $(shell expr `id -u` % 5000 + 25999)
 FWDPORT2 = $(shell expr `id -u` % 5000 + 30999)
@@ -325,7 +339,7 @@ FWDPORT2 = $(shell expr `id -u` % 5000 + 30999)
 QEMUOPTS += -netdev user,id=net0,hostfwd=udp::$(FWDPORT1)-:2000,hostfwd=udp::$(FWDPORT2)-:2001 -object filter-dump,id=net0,netdev=net0,file=packets.pcap
 QEMUOPTS += -device e1000,netdev=net0,bus=pcie.0
 
-qemu: check-qemu-version $K/kernel fs.img
+qemu: check-qemu-version $K/kernel fs.img tap
 	$(QEMU) $(QEMUOPTS)
 
 .gdbinit: .gdbinit.tmpl-riscv

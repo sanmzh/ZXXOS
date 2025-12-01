@@ -62,6 +62,7 @@ main()
     virtio_disk_init(); // emulated hard disk
     printdate();
     netinit();       // network stack
+    virtio_net_init(); // emulated network card
     netrun();        // start networking
     // LAB_NET
     pci_init();
