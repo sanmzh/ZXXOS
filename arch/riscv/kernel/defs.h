@@ -85,6 +85,12 @@ void            panic(char*) __attribute__((noreturn));
 void            printfinit(void);
 void 			backtrace(void);
 
+// printfmt.c
+void            vprintfmt(void (*)(int, void*), void*, const char*, void*);
+void            printfmt(void (*)(int, void*), void*, const char*, ...);
+int             vsnprintf(char*, int, const char*, void*);
+int             snprintf(char*, int, const char*, ...);  
+
 // proc.c
 int             cpuid(void);
 void            kexit(int);
@@ -144,6 +150,7 @@ void*           memmove(void*, const void*, uint);
 void*           memset(void*, int, uint);
 char*           safestrcpy(char*, const char*, int);
 int             strlen(const char*);
+int             strnlen(const char*, uint);
 int             strncmp(const char*, const char*, uint);
 char*           strncpy(char*, const char*, int);
 
@@ -228,8 +235,6 @@ void            net_rx(char *buf, int len);
 void            statsinit(void);
 void            statsinc(void);
 
-// sprintf.c
-int             snprintf(char*, unsigned long, const char*, ...);
 
 // msg.c
 struct msgbuf;
