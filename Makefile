@@ -54,6 +54,7 @@ OBJS += \
   $N/util.o \
   $N/net.o \
   $N/ether.o \
+  $N/ip.o \
   $P/virtio_net.o \
   $P/std.o \
   $K/e1000.o \
