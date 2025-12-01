@@ -58,6 +58,7 @@ OBJS += \
   $N/arp.o \
   $N/icmp.o \
   $N/udp.o \
+  $N/tcp.o \
   $P/virtio_net.o \
   $P/std.o \
   $K/e1000.o \
