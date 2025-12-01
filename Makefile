@@ -47,6 +47,7 @@ OBJS += \
   $K/trampoline.o \
   $K/plic.o \
   $K/rtc.o \
+  $K/time.o \
   $K/virtio_disk.o \
   $K/e1000.o \
   $K/net.o \

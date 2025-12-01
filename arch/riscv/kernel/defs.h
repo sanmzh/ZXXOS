@@ -8,6 +8,8 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+struct timeval;
+struct tm;
 // LAB_LOCK
 struct rwspinlock;
 // END LAB_LOCK
@@ -164,6 +166,12 @@ int            argaddr(int, uint64 *);
 int             fetchstr(uint64, char*, int);
 int             fetchaddr(uint64, uint64*);
 void            syscall();
+
+// time.c
+time_t          time(time_t*);
+int             gettimeofday(struct timeval*, void*);
+time_t          mktime(struct tm*);
+struct tm*      localtime_r(const time_t*, struct tm*);
 
 // trap.c
 extern uint     ticks;

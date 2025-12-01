@@ -3,6 +3,7 @@
 #include "memlayout.h"
 #include "riscv.h"
 #include "defs.h"
+#include "time.h"
 
 volatile static int started = 0;
 
@@ -17,6 +18,17 @@ printlogo()
   printf("███████╗ ██╔╝ ██╗ ██╔╝ ██╗ ╚██████╔╝ ███████║\n");
   printf("╚══════╝ ╚═╝  ╚═╝ ╚═╝  ╚═╝  ╚═════╝  ╚══════╝\n");
   printf("\n");
+}
+
+static void
+printdate()
+{
+  struct timeval tv;
+  struct tm tm;
+  gettimeofday(&tv, NULL);
+  localtime_r(&tv.tv_sec, &tm);
+  printf("%04d/%02d/%02d %02d:%02d:%02d\n",
+    tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 }
 
 // start() jumps here in supervisor mode on all CPUs.
@@ -48,6 +60,7 @@ main()
     sem_init();       // semaphore
     msg_init();       // message queue
     virtio_disk_init(); // emulated hard disk
+    printdate();
     // LAB_NET
     pci_init();
     netinit();
