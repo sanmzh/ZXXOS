@@ -6,6 +6,8 @@ I=include
 AR=arch
 ARCH?=riscv
 A=$(ARCH)
+N=$K/net
+P=$N/platform/xv6-riscv
 
 # 定义目录
 USER_DIR = user
@@ -49,6 +51,7 @@ OBJS += \
   $K/rtc.o \
   $K/time.o \
   $K/virtio_disk.o \
+  $P/std.o \
   $K/e1000.o \
   $K/net.o \
   $K/pci.o \
@@ -126,6 +129,7 @@ CFLAGS += -fno-builtin-free -fno-builtin-strnlen -fno-builtin-snprintf -fno-buil
 CFLAGS += -fno-builtin-memcpy -Wno-main
 CFLAGS += -fno-builtin-printf -fno-builtin-fprintf -fno-builtin-vprintf
 CFLAGS += -I. -I $(AR)/$A -I $(AR)/$A/$K -I$I -I$K
+CFLAGS += -I $K -I $N -I $P
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 CFLAGS += -Driscv
 CFLAGS += -DNET_TESTS_PORT=$(SERVERPORT)		# LAB_NET
@@ -362,7 +366,7 @@ fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
 	xxd -i fs.img > kernel/ramdisk.h
 
--include kernel/*.d user/*.d
+-include $K/*.d $U/*.d $N/*.d $P/*.d
 
 QEMU = qemu-system-loongarch64
 QEMU_OPTS = -kernel kernel/kernel -m 1G -nographic -smp 1
@@ -386,6 +390,7 @@ clean:
 		*.asm *.sym *.d packets.pcap \
 		$K/*.o $K/*.d $K/*.asm $K/*.sym \
 		$U/*.o $U/*.d $U/*.asm $U/*.sym $U/_* \
+		$N/*.o $N/*.d $P/*.o $P/*.d \
 		$(AR)/$L/$K/ramdisk.h $(AR)/$R/$K/ramdisk.h $U/initcode $(AR)/$L/$U/initcode.out $(AR)/$R/$U/initcode.out $U/initcode.out $K/ramdisk.h\
 		$K/kernel fs.img \
 		mkfs/mkfs .gdbinit \
