@@ -9,9 +9,13 @@
 #include "file.h"
 #include "defs.h"
 #include "fcntl.h"
+#include "softirq.h"
 
 struct spinlock tickslock;
 uint ticks;
+
+struct spinlock pendinglock;
+uint64 pending;
 
 extern char trampoline[], uservec[];
 
@@ -229,6 +233,24 @@ clockintr()
   w_stimecmp(r_time() + 1000000);
 }
 
+void
+softintr()
+{
+  acquire(&pendinglock);
+  uint64 irqs = pending;
+  pending = 0;
+  release(&pendinglock);
+
+  if(irqs & SOFT_IRQ_NET_RX) {
+    net_softirq_handler();
+  }
+  if(irqs & SOFT_IRQ_NET_EVENT) {
+    net_event_handler();
+  }
+
+  w_sip(r_sip() & ~SIP_SSIP);
+}
+
 // check if it's an external interrupt or software interrupt,
 // and handle it.
 // returns 2 if timer interrupt,
@@ -267,6 +289,10 @@ devintr()
     if(irq)
       plic_complete(irq);
 
+    return 1;
+  } else if(scause == 0x8000000000000001L){
+    // software interrupt.
+    softintr();
     return 1;
   } else if(scause == 0x8000000000000005L){
     // timer interrupt.
