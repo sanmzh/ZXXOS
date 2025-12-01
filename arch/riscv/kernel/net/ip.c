@@ -3,6 +3,7 @@
 #include "util.h"
 #include "./net.h"
 #include "ip.h"
+#include "arp.h"
 
 struct ip_hdr {
     uint8_t vhl;
