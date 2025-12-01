@@ -67,10 +67,19 @@
 #define SYS_kpgtbl     534				// 500 + 34 // 获取页表	// LAB_PGTBL
 
 // LAB_NET
-#define SYS_bind      529				// 500 + 
-#define SYS_unbind    530
-#define SYS_send      531
-#define SYS_recv      532
+// #define SYS_bind      529				// 500 + 
+// #define SYS_unbind    530
+// #define SYS_send      531
+// #define SYS_recv      532
+#define SYS_socket 522
+#define SYS_bind   523
+#define SYS_recvfrom 524
+#define SYS_sendto 525
+#define SYS_connect 526
+#define SYS_listen 527
+#define SYS_accept 528
+#define SYS_recv   529
+#define SYS_send   530
 
 // LAB_LOCK
 #define SYS_rwlktest  535

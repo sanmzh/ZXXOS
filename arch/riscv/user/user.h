@@ -1,6 +1,7 @@
 #define SBRK_ERROR ((char *)-1)
 
 struct stat;
+struct sockaddr;
 struct sysinfo; // in kernel/sysinfo.h
 
 // system calls
@@ -31,10 +32,19 @@ int trace(int);         // 用户态程序可以找到trace系统调用的跳板
 int sysinfo(struct sysinfo *);
 void kpgtbl(void);  	// LAB_PGTBL 打印页表
 // LAB_NET
-int bind(uint16);
-int unbind(uint16);
-int send(uint16, uint32, uint16, char *, uint32);
-int recv(uint16, uint32*, uint16*, char *, uint32);
+// int bind(uint16);
+// int unbind(uint16);
+// int send(uint16, uint32, uint16, char *, uint32);
+// int recv(uint16, uint32*, uint16*, char *, uint32);
+int socket(int, int, int);
+int bind(int, struct sockaddr*, int);
+int recvfrom(int, char*, int, struct sockaddr*, int*);
+int sendto(int, char*, int, struct sockaddr*, int);
+int connect(int, struct sockaddr*, int);
+int listen(int, int);
+int accept(int, struct sockaddr*, int*);
+int recv(int, char*, int);
+int send(int, char*, int);
 // END LAB_NET
 // #ifdef LAB_LOCK
 int rwlktest(void);

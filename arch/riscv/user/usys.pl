@@ -49,10 +49,19 @@ entry("sysinfo");
 entry("kpgtbl");
 
 # 网络相关系统调用
+# entry("bind");
+# entry("unbind");
+# entry("send");
+# entry("recv");
+entry("socket");
 entry("bind");
-entry("unbind");
-entry("send");
+entry("recvfrom");
+entry("sendto");
+entry("connect");
+entry("listen");
+entry("accept");
 entry("recv");
+entry("send");
 
 # lock
 entry("rwlktest");

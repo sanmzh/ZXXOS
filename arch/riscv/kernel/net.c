@@ -15,7 +15,7 @@ static uint8 local_mac[ETHADDR_LEN] = { 0x52, 0x54, 0x00, 0x12, 0x34, 0x56 };
 static uint32 local_ip = MAKE_IP_ADDR(10, 0, 2, 15);
 
 // qemu host's ethernet address.
-static uint8 host_mac[ETHADDR_LEN] = { 0x52, 0x55, 0x0a, 0x00, 0x02, 0x02 };
+//static uint8 host_mac[ETHADDR_LEN] = { 0x52, 0x55, 0x0a, 0x00, 0x02, 0x02 };
 
 static struct spinlock netlock;
 
@@ -118,30 +118,30 @@ tmp_change_netinit(void)  // 原名 netinit，multiple definition of `netinit' �
 // prepare to receive UDP packets address to the port,
 // i.e. allocate any queues &c needed.
 //
-uint64
-sys_bind(void)
-{
-  int port;
+// uint64
+// sys_bind(void)
+// {
+//   int port;
   
-  // 获取端口号参数
-  argint(0, &port);
+//   // 获取端口号参数
+//   argint(0, &port);
     
-  // 查找可用的端口表项
-  for(int i = 0; i < 16; i++) {
-    acquire(&socks[i].lock);
-    if(socks[i].used == 0) {
-      // 标记为已使用并设置端口号
-      socks[i].used = 1;
-      socks[i].rport = port;
-      release(&socks[i].lock);
-      return 0;
-    }
-    release(&socks[i].lock);
-  }
+//   // 查找可用的端口表项
+//   for(int i = 0; i < 16; i++) {
+//     acquire(&socks[i].lock);
+//     if(socks[i].used == 0) {
+//       // 标记为已使用并设置端口号
+//       socks[i].used = 1;
+//       socks[i].rport = port;
+//       release(&socks[i].lock);
+//       return 0;
+//     }
+//     release(&socks[i].lock);
+//   }
   
-  // 没有可用的端口表项
-  return -1;
-}
+//   // 没有可用的端口表项
+//   return -1;
+// }
 
 //
 // unbind(int port)
@@ -173,186 +173,186 @@ sys_unbind(void)
 // dport, *src, and *sport are host byte order.
 // bind(dport) must previously have been called.
 //
-uint64
-sys_recv(void)
-{
-  int dport;
-  uint64 src_addr, sport_addr, buf_addr;
-  int maxlen;
+// uint64
+// sys_recv(void)
+// {
+//   int dport;
+//   uint64 src_addr, sport_addr, buf_addr;
+//   int maxlen;
   
-  // 获取参数
-  argint(0, &dport);
-  argaddr(1, &src_addr);
-  argaddr(2, &sport_addr);
-  argaddr(3, &buf_addr);
-  argint(4, &maxlen);
+//   // 获取参数
+//   argint(0, &dport);
+//   argaddr(1, &src_addr);
+//   argaddr(2, &sport_addr);
+//   argaddr(3, &buf_addr);
+//   argint(4, &maxlen);
   
-  // 查找绑定的端口
-  struct sock *s = 0;
-  for(int i = 0; i < 16; i++) {
-    acquire(&socks[i].lock);
-    if(socks[i].used && socks[i].rport == dport) {
-      s = &socks[i];
-      break;
-    }
-    release(&socks[i].lock);
-  }
+//   // 查找绑定的端口
+//   struct sock *s = 0;
+//   for(int i = 0; i < 16; i++) {
+//     acquire(&socks[i].lock);
+//     if(socks[i].used && socks[i].rport == dport) {
+//       s = &socks[i];
+//       break;
+//     }
+//     release(&socks[i].lock);
+//   }
   
-  if(!s)
-    return -1; // 端口未绑定
+//   if(!s)
+//     return -1; // 端口未绑定
   
-  // 等待数据包到达
-  while(packetq_empty(&s->q)) {
-    sleep(&s->q, &s->lock);
-  }
+//   // 等待数据包到达
+//   while(packetq_empty(&s->q)) {
+//     sleep(&s->q, &s->lock);
+//   }
   
-  // 取出数据包
-  struct packet_node *node = packetq_pop(&s->q);
-  if(!node) {
-    release(&s->lock);
-    return -1; // 不应该发生
-  }
+//   // 取出数据包
+//   struct packet_node *node = packetq_pop(&s->q);
+//   if(!node) {
+//     release(&s->lock);
+//     return -1; // 不应该发生
+//   }
   
-  // 解析数据包
-  struct eth *eth = (struct eth *)node->buf;
-  struct ip *ip = (struct ip *)(eth + 1);
-  struct udp *udp = (struct udp *)(ip + 1);
+//   // 解析数据包
+//   struct eth *eth = (struct eth *)node->buf;
+//   struct ip *ip = (struct ip *)(eth + 1);
+//   struct udp *udp = (struct udp *)(ip + 1);
   
-  // 获取源 IP 和源端口
-  uint32 src_ip = ntohl(ip->ip_src);
-  uint16 src_port = ntohs(udp->sport);
+//   // 获取源 IP 和源端口
+//   uint32 src_ip = ntohl(ip->ip_src);
+//   uint16 src_port = ntohs(udp->sport);
   
-  // 计算有效载荷长度和位置
-  int payload_len = ntohs(udp->ulen) - sizeof(struct udp);
-  char *payload = (char *)(udp + 1);
+//   // 计算有效载荷长度和位置
+//   int payload_len = ntohs(udp->ulen) - sizeof(struct udp);
+//   char *payload = (char *)(udp + 1);
   
-  // 限制复制长度
-  if(payload_len > maxlen)
-    payload_len = maxlen;
+//   // 限制复制长度
+//   if(payload_len > maxlen)
+//     payload_len = maxlen;
   
-  // 复制数据到用户空间
-  if(copyout(myproc()->pagetable, buf_addr, payload, payload_len) < 0) {
-    kfree(node->buf);
-    kfree(node);
-    release(&s->lock);
-    return -1;
-  }
+//   // 复制数据到用户空间
+//   if(copyout(myproc()->pagetable, buf_addr, payload, payload_len) < 0) {
+//     kfree(node->buf);
+//     kfree(node);
+//     release(&s->lock);
+//     return -1;
+//   }
   
-  // 复制源 IP 和源端口到用户空间
-  if(copyout(myproc()->pagetable, src_addr, (char*)&src_ip, sizeof(src_ip)) < 0 ||
-     copyout(myproc()->pagetable, sport_addr, (char*)&src_port, sizeof(src_port)) < 0) {
-    kfree(node->buf);
-    kfree(node);
-    release(&s->lock);
-    return -1;
-  }
+//   // 复制源 IP 和源端口到用户空间
+//   if(copyout(myproc()->pagetable, src_addr, (char*)&src_ip, sizeof(src_ip)) < 0 ||
+//      copyout(myproc()->pagetable, sport_addr, (char*)&src_port, sizeof(src_port)) < 0) {
+//     kfree(node->buf);
+//     kfree(node);
+//     release(&s->lock);
+//     return -1;
+//   }
   
-  // 释放资源
-  kfree(node->buf);
-  kfree(node);
-  release(&s->lock);
+//   // 释放资源
+//   kfree(node->buf);
+//   kfree(node);
+//   release(&s->lock);
   
-  return payload_len;
-}
+//   return payload_len;
+// }
 
 // This code is lifted from FreeBSD's ping.c, and is copyright by the Regents
 // of the University of California.
-static unsigned short
-in_cksum(const unsigned char *addr, int len)
-{
-  int nleft = len;
-  const unsigned short *w = (const unsigned short *)addr;
-  unsigned int sum = 0;
-  unsigned short answer = 0;
+// static unsigned short
+// in_cksum(const unsigned char *addr, int len)
+// {
+//   int nleft = len;
+//   const unsigned short *w = (const unsigned short *)addr;
+//   unsigned int sum = 0;
+//   unsigned short answer = 0;
 
-  /*
-   * Our algorithm is simple, using a 32 bit accumulator (sum), we add
-   * sequential 16 bit words to it, and at the end, fold back all the
-   * carry bits from the top 16 bits into the lower 16 bits.
-   */
-  while (nleft > 1)  {
-    sum += *w++;
-    nleft -= 2;
-  }
+//   /*
+//    * Our algorithm is simple, using a 32 bit accumulator (sum), we add
+//    * sequential 16 bit words to it, and at the end, fold back all the
+//    * carry bits from the top 16 bits into the lower 16 bits.
+//    */
+//   while (nleft > 1)  {
+//     sum += *w++;
+//     nleft -= 2;
+//   }
 
-  /* mop up an odd byte, if necessary */
-  if (nleft == 1) {
-    *(unsigned char *)(&answer) = *(const unsigned char *)w;
-    sum += answer;
-  }
+//   /* mop up an odd byte, if necessary */
+//   if (nleft == 1) {
+//     *(unsigned char *)(&answer) = *(const unsigned char *)w;
+//     sum += answer;
+//   }
 
-  /* add back carry outs from top 16 bits to low 16 bits */
-  sum = (sum & 0xffff) + (sum >> 16);
-  sum += (sum >> 16);
-  /* guaranteed now that the lower 16 bits of sum are correct */
+//   /* add back carry outs from top 16 bits to low 16 bits */
+//   sum = (sum & 0xffff) + (sum >> 16);
+//   sum += (sum >> 16);
+//   /* guaranteed now that the lower 16 bits of sum are correct */
 
-  answer = ~sum; /* truncate to 16 bits */
-  return answer;
-}
+//   answer = ~sum; /* truncate to 16 bits */
+//   return answer;
+// }
 
 //
 // send(int sport, int dst, int dport, char *buf, int len)
 //
-uint64
-sys_send(void)
-{
-  struct proc *p = myproc();
-  int sport;
-  int dst;
-  int dport;
-  uint64 bufaddr;
-  int len;
+// uint64
+// sys_send(void)
+// {
+//   struct proc *p = myproc();
+//   int sport;
+//   int dst;
+//   int dport;
+//   uint64 bufaddr;
+//   int len;
 
-  argint(0, &sport);
-  argint(1, &dst);
-  argint(2, &dport);
-  argaddr(3, &bufaddr);
-  argint(4, &len);
+//   argint(0, &sport);
+//   argint(1, &dst);
+//   argint(2, &dport);
+//   argaddr(3, &bufaddr);
+//   argint(4, &len);
 
-  int total = len + sizeof(struct eth) + sizeof(struct ip) + sizeof(struct udp);
-  if(total > PGSIZE)
-    return -1;
+//   int total = len + sizeof(struct eth) + sizeof(struct ip) + sizeof(struct udp);
+//   if(total > PGSIZE)
+//     return -1;
 
-  char *buf = kalloc();
-  if(buf == 0){
-    printf("sys_send: kalloc failed\n");
-    return -1;
-  }
-  memset(buf, 0, PGSIZE);
+//   char *buf = kalloc();
+//   if(buf == 0){
+//     printf("sys_send: kalloc failed\n");
+//     return -1;
+//   }
+//   memset(buf, 0, PGSIZE);
 
-  struct eth *eth = (struct eth *) buf;
-  memmove(eth->dhost, host_mac, ETHADDR_LEN);
-  memmove(eth->shost, local_mac, ETHADDR_LEN);
-  eth->type = htons(ETHTYPE_IP);
+//   struct eth *eth = (struct eth *) buf;
+//   memmove(eth->dhost, host_mac, ETHADDR_LEN);
+//   memmove(eth->shost, local_mac, ETHADDR_LEN);
+//   eth->type = htons(ETHTYPE_IP);
 
-  struct ip *ip = (struct ip *)(eth + 1);
-  ip->ip_vhl = 0x45; // version 4, header length 4*5
-  ip->ip_tos = 0;
-  ip->ip_len = htons(sizeof(struct ip) + sizeof(struct udp) + len);
-  ip->ip_id = 0;
-  ip->ip_off = 0;
-  ip->ip_ttl = 100;
-  ip->ip_p = IPPROTO_UDP;
-  ip->ip_src = htonl(local_ip);
-  ip->ip_dst = htonl(dst);
-  ip->ip_sum = in_cksum((unsigned char *)ip, sizeof(*ip));
+//   struct ip *ip = (struct ip *)(eth + 1);
+//   ip->ip_vhl = 0x45; // version 4, header length 4*5
+//   ip->ip_tos = 0;
+//   ip->ip_len = htons(sizeof(struct ip) + sizeof(struct udp) + len);
+//   ip->ip_id = 0;
+//   ip->ip_off = 0;
+//   ip->ip_ttl = 100;
+//   ip->ip_p = IPPROTO_UDP;
+//   ip->ip_src = htonl(local_ip);
+//   ip->ip_dst = htonl(dst);
+//   ip->ip_sum = in_cksum((unsigned char *)ip, sizeof(*ip));
 
-  struct udp *udp = (struct udp *)(ip + 1);
-  udp->sport = htons(sport);
-  udp->dport = htons(dport);
-  udp->ulen = htons(len + sizeof(struct udp));
+//   struct udp *udp = (struct udp *)(ip + 1);
+//   udp->sport = htons(sport);
+//   udp->dport = htons(dport);
+//   udp->ulen = htons(len + sizeof(struct udp));
 
-  char *payload = (char *)(udp + 1);
-  if(copyin(p->pagetable, payload, bufaddr, len) < 0){
-    kfree(buf);
-    printf("send: copyin failed\n");
-    return -1;
-  }
+//   char *payload = (char *)(udp + 1);
+//   if(copyin(p->pagetable, payload, bufaddr, len) < 0){
+//     kfree(buf);
+//     printf("send: copyin failed\n");
+//     return -1;
+//   }
 
-  e1000_transmit(buf, total);
+//   e1000_transmit(buf, total);
 
-  return 0;
-}
+//   return 0;
+// }
 
 void
 ip_rx(char *buf, int len)

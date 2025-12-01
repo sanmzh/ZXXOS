@@ -130,10 +130,19 @@ extern uint64 sys_pause(void);
 // page table
 extern uint64 sys_kpgtbl(void);
 // LAB_NET
+// extern uint64 sys_bind(void);
+// extern uint64 sys_unbind(void);
+// extern uint64 sys_send(void);
+// extern uint64 sys_recv(void);
+extern uint64 sys_socket(void);
 extern uint64 sys_bind(void);
-extern uint64 sys_unbind(void);
-extern uint64 sys_send(void);
+extern uint64 sys_recvfrom(void);
+extern uint64 sys_sendto(void);
+extern uint64 sys_connect(void);
+extern uint64 sys_listen(void);
+extern uint64 sys_accept(void);
 extern uint64 sys_recv(void);
+extern uint64 sys_send(void);
 // LAB_LOCK
 extern uint64 sys_cpupin(void);
 
@@ -196,10 +205,19 @@ static uint64 (*syscalls[])(void) = {
 [SYS_kpgtbl]  sys_kpgtbl,
 
 // LAB_NET
-[SYS_bind] sys_bind,
-[SYS_unbind] sys_unbind,
-[SYS_send] sys_send,
-[SYS_recv] sys_recv,
+// [SYS_bind] sys_bind,
+// [SYS_unbind] sys_unbind,
+// [SYS_send] sys_send,
+// [SYS_recv] sys_recv,
+[SYS_socket]  sys_socket,
+[SYS_bind]    sys_bind,
+[SYS_recvfrom] sys_recvfrom,
+[SYS_sendto]  sys_sendto,
+[SYS_connect] sys_connect,
+[SYS_listen]  sys_listen,
+[SYS_accept]  sys_accept,
+[SYS_recv]    sys_recv,
+[SYS_send]    sys_send,
 
 // LAB_LOCK
 [SYS_rwlktest] sys_rwlktest,
