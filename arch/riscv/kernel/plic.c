@@ -14,6 +14,7 @@ plicinit(void)
   // set desired IRQ priorities non-zero (otherwise disabled).
   *(uint32*)(PLIC + UART0_IRQ*4) = 1;
   *(uint32*)(PLIC + VIRTIO0_IRQ*4) = 1;
+  *(uint32*)(PLIC + VIRTIO1_IRQ*4) = 1;
 
 // LAB_NET
   // PCIE IRQs are 32 to 35
@@ -30,7 +31,7 @@ plicinithart(void)
   
   // set enable bits for this hart's S-mode
   // for the uart and virtio disk.
-  *(uint32*)PLIC_SENABLE(hart) = (1 << UART0_IRQ) | (1 << VIRTIO0_IRQ);
+  *(uint32*)PLIC_SENABLE(hart) = (1 << UART0_IRQ) | (1 << VIRTIO0_IRQ) | (1 << VIRTIO1_IRQ);
 
 // LAB_NET
   // hack to get at next 32 IRQs for e1000.
