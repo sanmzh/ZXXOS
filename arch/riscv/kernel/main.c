@@ -61,9 +61,11 @@ main()
     msg_init();       // message queue
     virtio_disk_init(); // emulated hard disk
     printdate();
+    netinit();       // network stack
+    netrun();        // start networking
     // LAB_NET
     pci_init();
-    netinit();
+    // netinit();
     // END LAB_NET
     userinit();      // first user process
     __sync_synchronize();

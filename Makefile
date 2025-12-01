@@ -52,6 +52,7 @@ OBJS += \
   $K/time.o \
   $K/virtio_disk.o \
   $N/util.o \
+  $N/net.o \
   $P/std.o \
   $K/e1000.o \
   $K/net.o \

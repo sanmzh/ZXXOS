@@ -107,7 +107,7 @@ packetq_len(struct packetq *q)
 }
 
 void
-netinit(void)
+tmp_change_netinit(void)  // 原名 netinit，multiple definition of `netinit' 冲突，暂时改名
 {
   initlock(&netlock, "netlock");
 }
