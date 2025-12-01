@@ -65,6 +65,10 @@ int memcmp(const void *, const void *, uint);
 void *memcpy(void *, const void *, uint);
 char* sbrk(int);
 char* sbrklazy(int);
+uint16_t htons(uint16_t);
+uint16_t ntohs(uint16_t);
+uint32_t htonl(uint32_t);
+uint32_t ntohl(uint32_t);
 // #ifdef LAB_LOCK
 int statistics(void*, int);
 // #endif
