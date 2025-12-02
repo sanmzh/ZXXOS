@@ -80,6 +80,7 @@
 #define SYS_accept 528
 #define SYS_recv   529
 #define SYS_send   530
+#define SYS_ioctl  531
 
 // LAB_LOCK
 #define SYS_rwlktest  535

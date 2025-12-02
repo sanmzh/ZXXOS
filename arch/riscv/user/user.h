@@ -45,6 +45,7 @@ int listen(int, int);
 int accept(int, struct sockaddr*, int*);
 int recv(int, char*, int);
 int send(int, char*, int);
+int ioctl(int, int, void*);
 // END LAB_NET
 // #ifdef LAB_LOCK
 int rwlktest(void);

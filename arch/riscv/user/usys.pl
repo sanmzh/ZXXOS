@@ -62,6 +62,7 @@ entry("listen");
 entry("accept");
 entry("recv");
 entry("send");
+entry("ioctl");
 
 # lock
 entry("rwlktest");
