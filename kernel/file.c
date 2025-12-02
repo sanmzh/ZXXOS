@@ -84,9 +84,12 @@ fileclose(struct file *f)
     begin_op();
     iput(ff.ip);
     end_op();
-  } else if(ff.type == FD_SOCKET){
+  }
+#ifdef riscv
+  else if(ff.type == FD_SOCKET){
     socket_close(ff.socket);
   }
+#endif
 }
 
 // Get metadata about file f.
