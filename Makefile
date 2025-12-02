@@ -414,6 +414,7 @@ clean:
 		$K/*.o $K/*.d $K/*.asm $K/*.sym \
 		$U/*.o $U/*.d $U/*.asm $U/*.sym $U/_* \
 		$N/*.o $N/*.d $P/*.o $P/*.d \
+		$K/ipc/systemV/*.o kernel/ipc/systemV/*.d \
 		$(AR)/$L/$K/ramdisk.h $(AR)/$R/$K/ramdisk.h $U/initcode $(AR)/$L/$U/initcode.out $(AR)/$R/$U/initcode.out $U/initcode.out $K/ramdisk.h\
 		$K/kernel fs.img \
 		mkfs/mkfs .gdbinit \
