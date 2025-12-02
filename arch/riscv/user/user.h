@@ -2,6 +2,7 @@
 
 struct stat;
 struct sockaddr;
+struct in_addr;
 struct sysinfo; // in kernel/sysinfo.h
 
 // system calls
@@ -70,6 +71,8 @@ uint16_t htons(uint16_t);
 uint16_t ntohs(uint16_t);
 uint32_t htonl(uint32_t);
 uint32_t ntohl(uint32_t);
+long strtol(const char*, char**, int);
+int inet_pton(int, const char*, void*);
 // #ifdef LAB_LOCK
 int statistics(void*, int);
 // #endif

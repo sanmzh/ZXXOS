@@ -281,9 +281,6 @@ UPROGS=\
 	$U/_rm\
 	$U/_sh\
 	$U/_stressfs\
-	$U/_tcpecho\
-	$U/_udpecho\
-	$U/_usertests\
 	$U/_trace\
 	$U/_sysinfotest\
 #	$U/_grind\
@@ -292,6 +289,7 @@ UPROGS=\
 	
 ifeq ($(ARCH),riscv)
 UPROGS += $U/_grind\
+	$U/_ifconfig\
 	$U/_logstress\
 	$U/_forphan\
 	$U/_dorphan\
