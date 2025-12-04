@@ -289,6 +289,8 @@ UPROGS=\
 	
 ifeq ($(ARCH),riscv)
 UPROGS += $U/_grind\
+	$U/_tcpecho\
+	$U/_udpecho\
 	$U/_ifconfig\
 	$U/_logstress\
 	$U/_forphan\
