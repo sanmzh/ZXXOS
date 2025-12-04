@@ -140,7 +140,7 @@ CFLAGS += -fno-builtin-free -fno-builtin-strnlen -fno-builtin-snprintf -fno-buil
 CFLAGS += -fno-builtin-memcpy -Wno-main
 CFLAGS += -fno-builtin-printf -fno-builtin-fprintf -fno-builtin-vprintf
 CFLAGS += -I. -I $(AR)/$A -I $(AR)/$A/$K -I$I -I$K
-CFLAGS += -I $K -I $N -I $P
++CFLAGS += -I $N -I $P
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 CFLAGS += -Driscv
 CFLAGS += -DNET_TESTS_PORT=$(SERVERPORT)		# LAB_NET
@@ -198,6 +198,17 @@ $K/%.o:  $(AR)/$A/$K/%.c
 
 $K/%.o: $K/%.c
 	$(CC) $(CFLAGS) -g -c -o $@ $<
+
+# 将 arch/riscv/kernel/net 目录下的源文件编译到 kernel/net 目录
+kernel/net/%.o: arch/riscv/kernel/net/%.c
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+# 将 arch/riscv/kernel/net/platform/xv6-riscv 目录下的源文件编译到 kernel/net/platform/xv6-riscv 目录
+kernel/net/platform/xv6-riscv/%.o: arch/riscv/kernel/net/platform/xv6-riscv/%.c
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
 
 ifeq ($(ARCH),riscv)
 $K/start.o:  $(AR)/$A/$K/start.c
@@ -309,7 +320,8 @@ UPROGS += $U/_grind\
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
 
--include riscv/kernel/*.d riscv/user/*.d
+# 递归 include $K 和 $U 目录下的所有 .d 文件
+-include $(shell find $K $U -name "*.d")
 
 # try to generate a unique GDB port
 GDBPORT = $(shell expr `id -u` % 5000 + 25000)
@@ -412,23 +424,18 @@ endif
 # ramdisk.h is 生成文件
 clean:
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
-		*.asm *.sym *.d packets.pcap \
-		$K/*.o $K/*.d $K/*.asm $K/*.sym \
-		$U/*.o $U/*.d $U/*.asm $U/*.sym $U/_* \
-		$N/*.o $N/*.d $P/*.o $P/*.d \
-		$K/ipc/systemV/*.o kernel/ipc/systemV/*.d \
-		$(AR)/$L/$K/ramdisk.h $(AR)/$R/$K/ramdisk.h $U/initcode $(AR)/$L/$U/initcode.out $(AR)/$R/$U/initcode.out $U/initcode.out $K/ramdisk.h\
+		packets.pcap \
 		$K/kernel fs.img \
 		mkfs/mkfs .gdbinit \
 		$U/usys.S \
 		$(UPROGS) \
-		$(AR)/$R/$K/*.o $(AR)/$R/$K/*.d $(AR)/$R/$K/*.asm $(AR)/$R/$K/*.sym $(AR)/$R/$K/tags \
-		$(AR)/$R/$U/*.o $(AR)/$R/$U/*.d $(AR)/$R/$U/*.asm $(AR)/$R/$U/*.sym \
+		$(AR)/$L/$K/ramdisk.h $(AR)/$R/$K/ramdisk.h $U/initcode $(AR)/$L/$U/initcode.out $(AR)/$R/$U/initcode.out $U/initcode.out $K/ramdisk.h\
 		$(AR)/$R/$K/kernel $(AR)/$R/$U/usys.S \
 		$(AR)/$R/mkfs/mkfs \
 		$(AR)/$L/$K/kernel-back fs.img \
-		$(AR)/$L/$K/*.o $(AR)/$L/$K/*.d $(AR)/$L/$K/*.Lsm $(AR)/$L/$K/*.sym  $(AR)/$L/$K/tags \
-		$(AR)/$L/$U/*.o $(AR)/$L/$U/*.d $(AR)/$L/$U/*.asm $(AR)/$L/$U/*.sym \
 		$(AR)/$L/$K/kernel $(AR)/$L/$U/usys.S \
 		$(AR)/$L/mkfs/mkfs \
-		$(AR)/$L/$K/kernel-back fs.img \
+		$(AR)/$L/$K/kernel-back fs.img
+	# 递归删除 kernel 和 user 目录下的中间文件
+	find $K $U -type f \( -name "*.o" -o -name "*.d" -o -name "*.asm" -o -name "*.sym" -o -name "tags" \) -delete
+
