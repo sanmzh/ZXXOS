@@ -14,6 +14,39 @@
 // read and write tp, the thread pointer, which holds
 // this core's hartid (core number), the index into cpus[].
 
+/*
+static inline void
+tlb_flush_all(void)
+{
+    // op=0x0 或 0x1: 清除所有页表项。两个寄存器参数必须为 0。
+    asm volatile(
+        "invtlb 0x0, $zero, $zero"
+        : // 无输出
+        : // 无输入
+        : "memory"
+    );
+}
+
+// 读取 BADV 寄存器
+static inline uint64
+r_csr_badv(void)
+{
+  uint64 x;
+  // 使用内联汇编读取 csr 0x7（即 BADV 的编号）
+  // “csrrd”指令将 CSR 的值读入通用寄存器
+  asm volatile("csrrd %0, 0x7" : "=r" (x));
+  return x;
+}
+
+// 写入 BADV 寄存器（通常异常处理中不需要写，但为完整提供）
+static inline void
+w_csr_badv(uint64 x)
+{
+  // “csrwr”指令将通用寄存器的值写入 CSR
+  asm volatile("csrwr %0, 0x7" :: "r" (x));
+}
+*/
+
 static inline uint64
 r_sp()
 {
