@@ -3,7 +3,7 @@
 #include "virtio.h"
 
 #include "net/util.h"
-#include "net.h"
+#include "../../net.h"
 #include "net/ether.h"
 
 #define R(r) ((volatile uint32_t *)(VIRTIO1 + (r)))
