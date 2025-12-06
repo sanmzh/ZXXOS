@@ -64,7 +64,7 @@ OBJS += \
   $P/virtio_net.o \
   $P/std.o \
   $K/e1000.o \
-  $K/net.o \
+  $K/E1000_net.o \
   $K/pci.o \
   $K/stats.o \
   $K/kernelvec.o \
@@ -301,6 +301,8 @@ UPROGS=\
 	
 ifeq ($(ARCH),riscv)
 UPROGS += $U/_grind\
+    $U/_wc\
+	$U/_zombie\
 	$U/_tcpecho\
 	$U/_udpecho\
 	$U/_ifconfig\

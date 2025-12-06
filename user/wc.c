@@ -35,7 +35,7 @@ wc(int fd, char *name)
   printf("%d %d %d %s\n", l, w, c, name);
 }
 
-ints
+int
 main(int argc, char *argv[])
 {
   int fd, i;

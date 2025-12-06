@@ -8,7 +8,7 @@
 #include "fs.h"
 #include "sleeplock.h"
 #include "file.h"
-#include "net.h"
+#include "E1000_net.h"
 
 // xv6's ethernet and IP addresses
 static uint8 local_mac[ETHADDR_LEN] = { 0x52, 0x54, 0x00, 0x12, 0x34, 0x56 };
