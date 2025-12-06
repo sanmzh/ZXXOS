@@ -303,7 +303,7 @@ ifeq ($(ARCH),riscv)
 UPROGS += $U/_grind\
     $U/_wc\
 	$U/_zombie\
-	$U/_tcpecho\
+#	$U/_tcpecho\
 	$U/_udpecho\
 	$U/_ifconfig\
 	$U/_logstress\
