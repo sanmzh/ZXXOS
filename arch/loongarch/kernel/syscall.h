@@ -22,3 +22,9 @@
 #define SYS_close  21
 #define SYS_trace  22
 #define SYS_sysinfo 23
+
+// 信号量相关系统调用
+#define SYS_semget    541
+#define SYS_semop     542
+#define SYS_semctl    543
+

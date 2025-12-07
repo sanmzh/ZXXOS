@@ -48,6 +48,7 @@ main()
 //printf("iinit\n");
     fileinit();      // file table
 //printf("fileinit\n");
+    sem_init();
     ramdiskinit();   // emulated hard disk
 //printf("ramdiskinit\n");
     userinit();      // first user process

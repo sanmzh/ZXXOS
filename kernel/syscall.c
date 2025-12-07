@@ -124,6 +124,10 @@ extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
 extern uint64 sys_trace(void);
 extern uint64 sys_sysinfo(void);
+// 信号量系统调用
+extern uint64 sys_semget(void);
+extern uint64 sys_semop(void);
+extern uint64 sys_semctl(void);
 #ifdef riscv
 extern uint64 sys_pause(void);
 
@@ -155,11 +159,6 @@ extern uint64 sys_shmget(void);
 extern uint64 sys_shmat(void);
 extern uint64 sys_shmdt(void);
 extern uint64 sys_shmctl(void);
-
-// 信号量系统调用
-extern uint64 sys_semget(void);
-extern uint64 sys_semop(void);
-extern uint64 sys_semctl(void);
 
 // 消息队列系统调用
 extern uint64 sys_msgget(void);
@@ -199,6 +198,11 @@ static uint64 (*syscalls[])(void) = {
 [SYS_close]   sys_close,
 [SYS_trace]   sys_trace,
 [SYS_sysinfo] sys_sysinfo,
+
+// 信号量系统调用
+[SYS_semget] sys_semget,
+[SYS_semop] sys_semop,
+[SYS_semctl] sys_semctl,
 #ifdef riscv
 [SYS_pause]   sys_pause,
 
@@ -233,11 +237,6 @@ static uint64 (*syscalls[])(void) = {
 [SYS_shmat] sys_shmat,
 [SYS_shmdt] sys_shmdt,
 [SYS_shmctl] sys_shmctl,
-
-// 信号量系统调用
-[SYS_semget] sys_semget,
-[SYS_semop] sys_semop,
-[SYS_semctl] sys_semctl,
 
 // 消息队列系统调用
 [SYS_msgget] sys_msgget,

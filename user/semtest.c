@@ -352,7 +352,7 @@ int main() {
     
     // 压力测试
     stress_test();
-
+    
     printf("信号量测试完成\n");
     return 0;
 }

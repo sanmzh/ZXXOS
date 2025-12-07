@@ -40,7 +40,10 @@ OBJS = \
   $K/exec.o\
   $K/syscall.o\
   $K/sysproc.o\
-  $K/sysfile.o
+  $K/sysfile.o\
+  $K/ipc/systemV/sem.o \
+  $K/ipc/systemV/syssem.o
+
 
 # 架构特定的 OBJS
 ifeq ($(ARCH),riscv)
@@ -69,10 +72,8 @@ OBJS += \
   $K/stats.o \
   $K/kernelvec.o \
   $K/ipc/systemV/shm.o \
-  $K/ipc/systemV/sem.o \
   $K/ipc/systemV/msg.o \
   $K/ipc/systemV/sysshm.o \
-  $K/ipc/systemV/syssem.o \
   $K/ipc/systemV/sysmsg.o
 endif
 
@@ -295,6 +296,7 @@ UPROGS=\
 	$U/_trace\
 	$U/_sysinfotest\
 	$U/_usertests\
+	$U/_semtest\
 #	$U/_grind\
         $U/_wc\
 	$U/_zombie\
@@ -316,7 +318,6 @@ UPROGS += $U/_grind\
 	$U/_rwlktest\
 	$U/_mmaptest\
 	$U/_shmtest\
-	$U/_semtest\
 	$U/_msgtest\
 
 

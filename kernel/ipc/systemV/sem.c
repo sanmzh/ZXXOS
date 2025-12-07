@@ -2,7 +2,12 @@
 #include "types.h"
 #include "param.h"
 #include "memlayout.h"
+#ifdef riscv
 #include "riscv.h"
+#endif
+#ifdef loongarch
+#include "loongarch.h"
+#endif
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"

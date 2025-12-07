@@ -189,3 +189,14 @@ int             exec(char*, char**);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
+
+// 前向声明
+struct sembuf;
+struct semid_ds;
+
+// sem.c
+void            sem_init(void);
+int             semget(int key, int nsems, int semflg);
+int             semop(int semid, struct sembuf *sops, unsigned nsops);
+int             semctl(int semid, int semnum, int cmd, void *arg);
+
