@@ -439,6 +439,7 @@ clean:
 		$(AR)/$L/$K/kernel $(AR)/$L/$U/usys.S \
 		$(AR)/$L/mkfs/mkfs \
 		$(AR)/$L/$K/kernel-back fs.img
+	rm -f user/_*	# 删除 user 目录下的所有 _* 文件
 	# 递归删除 kernel 和 user 目录下的中间文件
 	find $K $U -type f \( -name "*.o" -o -name "*.d" -o -name "*.asm" -o -name "*.sym" -o -name "tags" \) -delete
 
