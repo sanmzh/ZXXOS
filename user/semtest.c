@@ -60,7 +60,7 @@ void test_basic_sem() {
 
     // 删除信号量集
     if (semctl(semid, 0, IPC_RMID, 0) < 0) {
-        printf("删除信号量集失败\n");
+        printf("删除信号量集失败4\n");
         return;
     }
     printf("删除信号量集成功\n");
@@ -130,7 +130,7 @@ void test_sem_sync() {
         
         // 删除信号量集
         if (semctl(semid, 0, IPC_RMID, 0) < 0) {
-            printf("删除信号量集失败\n");
+            printf("删除信号量集失败3\n");
             return;
         }
         printf("删除信号量集成功\n");
@@ -199,7 +199,7 @@ void test_multiple_sems() {
 
     // 删除信号量集
     if (semctl(semid, 0, IPC_RMID, 0) < 0) {
-        printf("删除信号量集失败\n");
+        printf("删除信号量集失败2\n");
         return;
     }
     printf("删除信号量集成功\n");
@@ -331,7 +331,7 @@ void stress_test() {
     
     // 清理资源
     if (semctl(semid1, 0, IPC_RMID, 0) < 0 || semctl(semid2, 0, IPC_RMID, 0) < 0 || semctl(output_sem, 0, IPC_RMID, 0) < 0) {
-        printf("删除信号量集失败\n");
+        printf("删除信号量集失败1\n");
         return;
     }
     
@@ -354,5 +354,5 @@ int main() {
     stress_test();
     
     printf("信号量测试完成\n");
-    return 0;
+    exit(0);
 }
