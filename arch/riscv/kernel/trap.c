@@ -138,7 +138,16 @@ done:
 
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2)
+    #ifdef SCHEDULER_RR
+    // RR 算法：进入时间中断后，处理时间片递减与抢占逻辑
+    rr_on_timer_tick();
+    #elif defined(SCHEDULER_MLFQ)
+    // MLFQ 算法：进入时间中断后，处理时间片递减、动态优先级调整与抢占逻辑
+    mlfq_on_timer_tick();
+    #else
+    // 默认：直接让出 CPU
     yield();
+    #endif
 
   prepare_return();
 
@@ -208,8 +217,19 @@ kerneltrap()
   }
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2 && myproc() != 0)
-    yield();
+  if (which_dev == 2) {
+    #ifdef SCHEDULER_RR
+    // RR 算法：进入时间中断后，处理时间片递减与抢占逻辑
+    rr_on_timer_tick();
+    #elif defined(SCHEDULER_MLFQ)
+    // MLFQ 算法：进入时间中断后，处理时间片递减、动态优先级调整与抢占逻辑
+    mlfq_on_timer_tick();
+    #else
+    // 默认：直接让出 CPU
+    if (myproc() != 0 && myproc()->state == RUNNING)
+      yield();
+    #endif
+  }
 
   // the yield() may have caused some traps to occur,
   // so restore trap registers for use by kernelvec.S's sepc instruction.

@@ -53,6 +53,11 @@ int rwlktest(void);
 int cpupin(int);
 // #endif
 
+// 调度器相关系统调用
+int set_timeslice(int);
+int set_priority(int);
+int get_priority(void);
+
 // ulib.c
 int stat(const char*, struct stat*);
 char* strcpy(char*, const char*);
