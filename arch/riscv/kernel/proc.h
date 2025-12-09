@@ -96,6 +96,9 @@ struct vm_area
 };
 
 #include "ipc/systemV/ipc.h"
+#ifdef SCHEDULER_RR
+#define DEFAULT_TIMESLICE 1
+#endif
 
 // Per-process state
 struct proc {
@@ -131,4 +134,9 @@ struct proc {
 // LAB_LOCK
   struct cpu *pincpu;
 // END LAB_LOCK
+
+  #ifdef SCHEDULER_RR
+  int timeslice;                // 进程设定的基础时间片长度
+  int slice_remaining;          // 当前调度周期内剩余的时间片
+  #endif
 };

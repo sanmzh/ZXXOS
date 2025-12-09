@@ -194,3 +194,27 @@ sys_cpupin(void)
   return 0;
 }
 // END LAB_LOCK
+
+#ifdef SCHEDULER_RR
+/**
+ * @brief RR 算法所需内核函数，设置当前进程的时间片
+ * @param timeslice 新的时间片长度
+ * @return 0 表示系统调用成功返回，-1 表示参数解析失败
+ */
+uint64 sys_set_timeslice(void) {
+  int timeslice;
+  if (argint(0, &timeslice) < 0) {
+    return -1;
+  }
+  struct proc* p = myproc();
+  // 合法性校验
+  if (timeslice < 1) {
+    return -1;
+  }
+  acquire(&p->lock);
+  p->timeslice = timeslice;
+  p->slice_remaining = timeslice;
+  release(&p->lock);
+  return 0;
+}
+#endif

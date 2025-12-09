@@ -166,6 +166,9 @@ extern uint64 sys_msgget(void);
 extern uint64 sys_msgsnd(void);
 extern uint64 sys_msgrcv(void);
 extern uint64 sys_msgctl(void);
+
+// 调度器系统调用
+extern uint64 sys_set_timeslice(void);
 #endif
 
 #ifdef loongarch
@@ -244,6 +247,10 @@ static uint64 (*syscalls[])(void) = {
 [SYS_msgsnd] sys_msgsnd,
 [SYS_msgrcv] sys_msgrcv,
 [SYS_msgctl] sys_msgctl,
+
+// 调度器系统调用
+[SYS_set_timeslice] sys_set_timeslice,
+
 #endif
 #ifdef loongarch
 [SYS_sleep]   sys_sleep,
@@ -283,6 +290,7 @@ const char* syscall_names[] = {
 [SYS_sleep]   "sleep",
 #endif
 [SYS_trace]   "trace",
+[SYS_set_timeslice] "set_timeslice",
 
 
 };

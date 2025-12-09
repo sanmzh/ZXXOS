@@ -120,6 +120,7 @@ int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
 void            proccount(uint64* count);
+void 			rr_on_timer_tick(void);
 
 // rtc.c
 uint64          rtcread(void);

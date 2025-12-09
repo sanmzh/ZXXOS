@@ -103,4 +103,7 @@
 #define SYS_msgrcv    546
 #define SYS_msgctl    547
 
+// 调度器相关系统调用
+#define SYS_set_timeslice 400 // RR 算法：设置当前进程的时间片
+
 #endif // _SYS_H

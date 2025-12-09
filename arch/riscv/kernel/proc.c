@@ -128,6 +128,12 @@ found:
   p->pid = allocpid();
   p->state = USED;
 
+  #ifdef SCHEDULER_RR
+  // RR: 初始化时间片相关字段
+  p->timeslice = DEFAULT_TIMESLICE;
+  p->slice_remaining = DEFAULT_TIMESLICE;
+  #endif
+
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
@@ -179,6 +185,11 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+  
+  #ifdef SCHEDULER_RR
+  p->timeslice = DEFAULT_TIMESLICE; // 重置时间片为默认值以供下次复用
+  p->slice_remaining = 0; // 重置剩余时间片以避免旧值影响
+  #endif
 }
 
 // Create a user page table for a given process, with no user memory,
@@ -311,6 +322,12 @@ kfork(void)
   safestrcpy(np->name, p->name, sizeof(p->name));
 
   np->trace_mask = p->trace_mask;         // 子进程继承父进程的syscall_trace
+
+  #ifdef SCHEDULER_RR
+  // fork 时沿用父进程的时间片配置 
+  np->timeslice = p->timeslice; 
+  np->slice_remaining = p->timeslice; 
+  #endif
 
   pid = np->pid;
 
@@ -498,6 +515,13 @@ scheduler(void)
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
+        #ifdef SCHEDULER_RR
+        // RR: 确保时间片至少为 1
+        if (p->timeslice < 1) {
+          p->timeslice = 1;
+        }
+        p->slice_remaining = p->timeslice;
+        #endif
         p->state = RUNNING;
         c->proc = p;
         swtch(&c->context, &p->context);
@@ -757,3 +781,31 @@ proccount(uint64* count)
     }
   }
 }
+
+
+#ifdef SCHEDULER_RR
+/**
+ * @brief RR 算法所需内核函数，处理时间片递减与抢占逻辑
+ * @return void
+ */
+void rr_on_timer_tick(void) {
+  struct proc* p = myproc();
+  // 无进程时无需处理
+  if (p == 0) {
+    return;
+  }
+  // 仅在进程实际运行时才计时
+  if (p->state != RUNNING) {
+    return;
+  }
+  // 仍有剩余时间片时递减
+  if (p->slice_remaining > 0) {
+    p->slice_remaining--;
+  }
+  // 时间片耗尽需让出 CPU
+  if (p->slice_remaining <= 0) {
+    yield();
+    return;
+  }
+}
+#endif
