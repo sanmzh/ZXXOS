@@ -171,7 +171,7 @@ extern uint64 sys_msgctl(void);
 #ifdef SCHEDULER_RR
 extern uint64 sys_set_timeslice(void);
 #endif
-#ifdef SCHEDULER_PRIORITY
+#if defined(SCHEDULER_PRIORITY) || defined(SCHEDULER_MLFQ)
 extern uint64 sys_set_priority(void);
 extern uint64 sys_get_priority(void);
 #endif
@@ -259,12 +259,12 @@ static uint64 (*syscalls[])(void) = {
  #ifdef SCHEDULER_RR
 [SYS_set_timeslice] sys_set_timeslice,
 #endif
-#ifdef SCHEDULER_PRIORITY
+#if defined(SCHEDULER_PRIORITY) || defined(SCHEDULER_MLFQ)
 [SYS_set_priority]  sys_set_priority,
 [SYS_get_priority]  sys_get_priority,
 #endif
 
-#endif
+#endif    // riscv
 #ifdef loongarch
 [SYS_sleep]   sys_sleep,
 #endif

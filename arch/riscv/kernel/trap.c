@@ -141,6 +141,9 @@ done:
     #ifdef SCHEDULER_RR
     // RR 算法：进入时间中断后，处理时间片递减与抢占逻辑
     rr_on_timer_tick();
+    #elif defined(SCHEDULER_MLFQ)
+    // MLFQ 算法：进入时间中断后，处理时间片递减、动态优先级调整与抢占逻辑
+    mlfq_on_timer_tick();
     #else
     // 默认：直接让出 CPU
     yield();
@@ -218,6 +221,9 @@ kerneltrap()
     #ifdef SCHEDULER_RR
     // RR 算法：进入时间中断后，处理时间片递减与抢占逻辑
     rr_on_timer_tick();
+    #elif defined(SCHEDULER_MLFQ)
+    // MLFQ 算法：进入时间中断后，处理时间片递减、动态优先级调整与抢占逻辑
+    mlfq_on_timer_tick();
     #else
     // 默认：直接让出 CPU
     if (myproc() != 0 && myproc()->state == RUNNING)

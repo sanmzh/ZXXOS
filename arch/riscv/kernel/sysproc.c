@@ -97,22 +97,48 @@ sys_sleep(void)
   int n;
   uint ticks0;
 
-  argint(0, &n);
-  if(n < 0)
-    n = 0;
+  #ifdef SCHEDULER_MLFQ
+  // MLFQ 算法需要记录每次 sleep 的休眠 tick 数累积，从而判断 I/O 密集还是 CPU 密集
+  int slept = 0;
+  #endif
+
+  if (argint(0, &n) < 0) 
+    return -1;
+  
+  // 将秒转换为tick，系统每秒大约有10个tick（每0.1秒一个tick）
+  n = n * 10;
+
   acquire(&tickslock);
   ticks0 = ticks;
-  // 将秒转换为时钟节拍数，根据clockintr()中的设置，每秒约10个节拍
-  // 因为1,000,000个时钟周期约为0.1秒，所以1秒约为10,000,000个时钟周期
-  n = n * 10;
+
   while(ticks - ticks0 < n){
     if(killed(myproc())){
+
+      #ifdef SCHEDULER_MLFQ
+      slept = ticks - ticks0;
+      #endif
+
       release(&tickslock);
+
+      #ifdef SCHEDULER_MLFQ
+      if (slept > 0) {
+        mlfq_account_sleep(myproc(), slept);
+      }
+      #endif
+
       return -1;
     }
     sleep(&ticks, &tickslock);
   }
   release(&tickslock);
+
+  #ifdef SCHEDULER_MLFQ
+  slept = ticks - ticks0;
+  if (slept > 0) {
+    mlfq_account_sleep(myproc(), slept);
+  }
+  #endif
+  
   return 0;
 }
 
@@ -220,9 +246,10 @@ uint64 sys_set_timeslice(void) {
 }
 #endif
 
-#ifdef SCHEDULER_PRIORITY
+// kernel/sysproc.c
+#if defined(SCHEDULER_PRIORITY) || defined(SCHEDULER_MLFQ)
 /**
- * @brief 优先级调度算法所需内核函数，设置当前进程的优先级
+ * @brief 优先级 / MLFQ 调度算法所需内核函数，设置当前进程的优先级
  * @param priority 新的优先级
  * @return 0 表示系统调用成功返回，-1 表示参数解析失败
  */
@@ -233,6 +260,7 @@ uint64 sys_set_priority(void) {
   }
   struct proc* p = myproc();
 
+  #ifdef SCHEDULER_PRIORITY
   // 优先级调度：拒绝负值优先级
   if (priority < 0) {
     return -1;
@@ -240,13 +268,26 @@ uint64 sys_set_priority(void) {
   acquire(&p->lock);
   p->priority = priority;
   release(&p->lock);
+  #endif
+
+  #ifdef SCHEDULER_MLFQ
+  acquire(&p->lock);
+  // MLFQ：裁剪优先级到合法区间，并更新动态优先级、重置统计数据
+  p->priority = mlfq_clamp_priority(priority);
+  p->base_priority = p->priority;
+  p->ticks_used = 0;
+  p->eval_ticks = 0;
+  p->cpu_ticks = 0;
+  p->sleep_ticks = 0;
+  release(&p->lock);
+  #endif
 
   return 0;
 }
 
 /**
- * @brief 优先级调度算法所需内核函数，实现 get_priority 系统调用，获取当前进程的优先级。
- * @return 当前进程的优先级
+ * @brief 优先级 / MLFQ 算法所需内核函数，实现 get_priority 系统调用，获取当前进程的优先级。
+ * @return 当前进程的优先级（占位实现固定返回0）
  */
 uint64 sys_get_priority(void) {
   struct proc* p = myproc();

@@ -120,7 +120,14 @@ int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
 void            proccount(uint64* count);
-void 			rr_on_timer_tick(void);
+#ifdef SCHEDULER_RR
+void            rr_on_timer_tick(void);
+#endif
+#ifdef SCHEDULER_MLFQ
+int             mlfq_clamp_priority(int priority);
+void            mlfq_on_timer_tick(void);
+void            mlfq_account_sleep(struct proc *p, int sleep_ticks);
+#endif
 
 // rtc.c
 uint64          rtcread(void);

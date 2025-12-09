@@ -102,6 +102,17 @@ struct vm_area
 #ifdef SCHEDULER_PRIORITY
 #define DEFAULT_PRIORITY 20
 #endif
+#ifdef SCHEDULER_MLFQ
+#define DEFAULT_PRIORITY 5 // 默认分配给新进程的优先级
+#define MLFQ_MIN_PRIORITY_LEVEL 1 // MLFQ：最高优先级对应的数值
+#define MLFQ_MAX_PRIORITY_LEVEL 20 // MLFQ：最低优先级对应的数值
+#define MLFQ_EVAL_TICKS 5 // MLFQ：统计窗口长度，单位为 tick
+#define MLFQ_CPU_DOM_RATIO 2 // MLFQ：CPU 压制阈值，CPU 使用超过休眠两倍视为 CPU 密集
+#define MLFQ_SLEEP_DOM_RATIO 2 // MLFQ：休眠压制阈值，休眠超过 CPU 两倍视为 I/O 密集
+
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#endif
 
 // Per-process state
 struct proc {
@@ -145,5 +156,14 @@ struct proc {
   #ifdef SCHEDULER_PRIORITY
   // 优先级调度所需的 PCB 字段
   int priority;                 // 数值越小代表优先级越高
+  #endif
+  #ifdef SCHEDULER_MLFQ
+  // MLFQ 算法所需的 PCB 字段
+  int priority;                 // 动态优先级，数值越小代表优先级越高
+  int ticks_used;               // 记录当前时间片已消耗的 tick 数
+  int eval_ticks;               // 当前统计窗口内累计 tick 数
+  int cpu_ticks;                // 最近窗口内的 CPU 使用 tick 数
+  int sleep_ticks;              // 最近窗口内的休眠 tick 数
+  int base_priority;            // 记录用户设置的基础优先级，用于同级队列的 FIFO 判定
   #endif
 };
