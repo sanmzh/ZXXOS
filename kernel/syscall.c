@@ -168,7 +168,14 @@ extern uint64 sys_msgrcv(void);
 extern uint64 sys_msgctl(void);
 
 // 调度器系统调用
+#ifdef SCHEDULER_RR
 extern uint64 sys_set_timeslice(void);
+#endif
+#ifdef SCHEDULER_PRIORITY
+extern uint64 sys_set_priority(void);
+extern uint64 sys_get_priority(void);
+#endif
+
 #endif
 
 #ifdef loongarch
@@ -249,7 +256,13 @@ static uint64 (*syscalls[])(void) = {
 [SYS_msgctl] sys_msgctl,
 
 // 调度器系统调用
+ #ifdef SCHEDULER_RR
 [SYS_set_timeslice] sys_set_timeslice,
+#endif
+#ifdef SCHEDULER_PRIORITY
+[SYS_set_priority]  sys_set_priority,
+[SYS_get_priority]  sys_get_priority,
+#endif
 
 #endif
 #ifdef loongarch
@@ -290,7 +303,6 @@ const char* syscall_names[] = {
 [SYS_sleep]   "sleep",
 #endif
 [SYS_trace]   "trace",
-[SYS_set_timeslice] "set_timeslice",
 
 
 };

@@ -99,6 +99,9 @@ struct vm_area
 #ifdef SCHEDULER_RR
 #define DEFAULT_TIMESLICE 1
 #endif
+#ifdef SCHEDULER_PRIORITY
+#define DEFAULT_PRIORITY 20
+#endif
 
 // Per-process state
 struct proc {
@@ -138,5 +141,9 @@ struct proc {
   #ifdef SCHEDULER_RR
   int timeslice;                // 进程设定的基础时间片长度
   int slice_remaining;          // 当前调度周期内剩余的时间片
+  #endif
+  #ifdef SCHEDULER_PRIORITY
+  // 优先级调度所需的 PCB 字段
+  int priority;                 // 数值越小代表优先级越高
   #endif
 };

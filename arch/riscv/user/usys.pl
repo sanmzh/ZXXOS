@@ -90,3 +90,5 @@ entry("msgctl");
 
 # 调度器相关系统调用
 entry("set_timeslice");
+entry("set_priority");
+entry("get_priority");

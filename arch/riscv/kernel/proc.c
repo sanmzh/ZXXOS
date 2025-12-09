@@ -133,6 +133,10 @@ found:
   p->timeslice = DEFAULT_TIMESLICE;
   p->slice_remaining = DEFAULT_TIMESLICE;
   #endif
+  #ifdef SCHEDULER_PRIORITY
+  // 优先级调度算法：初始化优先级
+  p->priority = DEFAULT_PRIORITY;
+  #endif
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -189,6 +193,9 @@ freeproc(struct proc *p)
   #ifdef SCHEDULER_RR
   p->timeslice = DEFAULT_TIMESLICE; // 重置时间片为默认值以供下次复用
   p->slice_remaining = 0; // 重置剩余时间片以避免旧值影响
+  #endif
+  #ifdef SCHEDULER_PRIORITY
+  p->priority = DEFAULT_PRIORITY; // 恢复默认优先级便于复用
   #endif
 }
 
@@ -327,6 +334,10 @@ kfork(void)
   // fork 时沿用父进程的时间片配置 
   np->timeslice = p->timeslice; 
   np->slice_remaining = p->timeslice; 
+  #endif
+  #ifdef SCHEDULER_PRIORITY
+  // 子进程继承父进程的优先级
+  np->priority = p->priority;
   #endif
 
   pid = np->pid;
@@ -476,6 +487,19 @@ kwait(uint64 addr)
   }
 }
 
+// 检查是否需要进入空闲状态并执行相应操作
+static void
+check_idle_state(int nproc)
+{
+  if(nproc <= 2) {   // only init and sh exist
+    // nothing to run; stop running on this core until an interrupt.
+    intr_on();
+#ifndef LAB_FS
+    asm volatile("wfi");
+#endif
+  }
+}
+
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
 // Scheduler never returns.  It loops, doing:
@@ -489,6 +513,69 @@ scheduler(void)
   struct proc *p;
   struct cpu *c = mycpu();
 
+  #ifdef SCHEDULER_PRIORITY
+  c->proc = 0;
+  for(;;){
+    // Avoid deadlock by ensuring that devices can interrupt.
+    intr_on();
+    intr_off();
+
+    struct proc *selected = NULL;
+    int nproc = 0;
+    
+    // SCHEDULER_PRIORITY：遍历整个进程表比较优先级，找到优先级最高（Priority最小）的进程
+    for(p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+      if (p->state != UNUSED) {
+        ++nproc;
+      }
+// LAB_LOCK
+      if(p->pincpu && p->pincpu != c) {
+        release(&p->lock);
+        continue;
+      }
+// END LAB_LOCK
+      if (p->state != RUNNABLE) {
+        release(&p->lock); // 非 RUNNABLE 直接释放锁
+        continue;
+      }
+      
+      if (selected == NULL 
+        || p->priority < selected->priority 
+        || (p->priority == selected->priority && p->pid < selected->pid)) {
+        if (selected != NULL) {
+          release(&selected->lock);
+        }
+        selected = p;
+        continue;
+      }
+      // 非候选者立即释放锁
+      release(&p->lock);
+    }
+    p = selected;
+
+    if (p != NULL) {
+      if (p->state == RUNNABLE) {
+        // Switch to chosen process.  It is the process's job
+        // to release its lock and then reacquire it
+        // before jumping back to us.
+        p->state = RUNNING;
+        c->proc = p;
+        swtch(&c->context, &p->context);
+
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+        
+      }
+      release(&p->lock);
+    }
+    
+    // 检查是否需要进入空闲状态
+    check_idle_state(nproc);
+  }
+  #else
+  // 原有的调度器逻辑
   c->proc = 0;
   for(;;){
     // The most recent process to run may have had interrupts
@@ -532,14 +619,11 @@ scheduler(void)
       }
       release(&p->lock);
     }
-    if(nproc <= 2) {   // only init and sh exist
-      // nothing to run; stop running on this core until an interrupt.
-      intr_on();
-#ifndef LAB_FS
-      asm volatile("wfi");
-#endif
-    }
+    
+    // 检查是否需要进入空闲状态
+    check_idle_state(nproc);
   }
+  #endif
 }
 
 // Switch to scheduler.  Must hold only p->lock

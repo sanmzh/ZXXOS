@@ -102,8 +102,9 @@ sys_sleep(void)
     n = 0;
   acquire(&tickslock);
   ticks0 = ticks;
-  // 将秒转换为时钟节拍数，假设每秒100个节拍
-  n = n * 100;
+  // 将秒转换为时钟节拍数，根据clockintr()中的设置，每秒约10个节拍
+  // 因为1,000,000个时钟周期约为0.1秒，所以1秒约为10,000,000个时钟周期
+  n = n * 10;
   while(ticks - ticks0 < n){
     if(killed(myproc())){
       release(&tickslock);
@@ -216,5 +217,42 @@ uint64 sys_set_timeslice(void) {
   p->slice_remaining = timeslice;
   release(&p->lock);
   return 0;
+}
+#endif
+
+#ifdef SCHEDULER_PRIORITY
+/**
+ * @brief 优先级调度算法所需内核函数，设置当前进程的优先级
+ * @param priority 新的优先级
+ * @return 0 表示系统调用成功返回，-1 表示参数解析失败
+ */
+uint64 sys_set_priority(void) {
+  int priority;
+  if (argint(0, &priority) < 0) {
+    return -1;
+  }
+  struct proc* p = myproc();
+
+  // 优先级调度：拒绝负值优先级
+  if (priority < 0) {
+    return -1;
+  }
+  acquire(&p->lock);
+  p->priority = priority;
+  release(&p->lock);
+
+  return 0;
+}
+
+/**
+ * @brief 优先级调度算法所需内核函数，实现 get_priority 系统调用，获取当前进程的优先级。
+ * @return 当前进程的优先级
+ */
+uint64 sys_get_priority(void) {
+  struct proc* p = myproc();
+  acquire(&p->lock);
+  int priority = p->priority;
+  release(&p->lock);
+  return priority;
 }
 #endif
