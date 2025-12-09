@@ -297,6 +297,7 @@ UPROGS=\
 	$U/_sysinfotest\
 	$U/_usertests\
 	$U/_semtest\
+	$U/_cowtest\
 #	$U/_grind\
         $U/_wc\
 	$U/_zombie\
@@ -313,7 +314,6 @@ UPROGS += $U/_grind\
 	$U/_dorphan\
 	$U/_pgtbltest\
 	$U/_bttest\
-	$U/_cowtest\
 	$U/_kalloctest\
 	$U/_rwlktest\
 	$U/_mmaptest\

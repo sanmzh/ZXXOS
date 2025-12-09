@@ -14,7 +14,7 @@
 // read and write tp, the thread pointer, which holds
 // this core's hartid (core number), the index into cpus[].
 
-/*
+
 static inline void
 tlb_flush_all(void)
 {
@@ -45,7 +45,7 @@ w_csr_badv(uint64 x)
   // “csrwr”指令将通用寄存器的值写入 CSR
   asm volatile("csrwr %0, 0x7" :: "r" (x));
 }
-*/
+
 
 static inline uint64
 r_sp()
@@ -327,6 +327,7 @@ intr_off()
 #define PTE_MAT (1L << 4) //memory access type
 #define PTE_P (1L << 7) // physical page exists
 #define PTE_W (1L << 8) // writeable
+#define PTE_COW (1L << 9)// cow
 #define PTE_NX (1UL << 62) //non executable
 #define PTE_NR (1L << 61) //non readable
 #define PTE_RPLV (1UL << 63) //restricted privilege level enable

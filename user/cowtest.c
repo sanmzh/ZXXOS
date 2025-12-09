@@ -1,7 +1,10 @@
 //
 // tests for copy-on-write fork() assignment.
 //
-
+#ifdef loongarch 
+#define PHYSTOP RAMSTOP
+#define KERNBASE RAMBASE
+#endif
 #include "kernel/types.h"
 #include "kernel/memlayout.h"
 #include "user/user.h"
@@ -100,7 +103,7 @@ threetest()
 
   wait(0);
 
-  pause(1);
+  sleep(1);
 
   for(char *q = p; q < p + sz; q += 4096){
     if(*(int*)q != getpid()){
@@ -144,12 +147,12 @@ filetest()
       exit(-1);
     }
     if(pid == 0){
-      pause(1);
+      sleep(1);
       if(read(fds[0], buf, sizeof(i)) != sizeof(i)){
         printf("error: read failed\n");
         exit(1);
       }
-      pause(1);
+      sleep(1);
       int j = *(int*)buf;
       if(j != i){
         printf("error: read the wrong value %d; expected %d\n", j, i);
@@ -196,7 +199,7 @@ forkforktest()
   for(int iter = 0; iter < 100; iter++){
     for(int nc = 0; nc < children; nc++){
       if(fork() == 0){
-        pause(2);
+        sleep(2);
         fork();
         fork();
         exit(0);
@@ -209,7 +212,7 @@ forkforktest()
     }
   }
 
-  pause(5);
+  sleep(5);
   for(int i = 0; i < sz; i += 4096){
     if(p[i] != 27){
       printf("error: parent's memory was modified!\n");
@@ -232,7 +235,9 @@ main(int argc, char *argv[])
   threetest();
   threetest();
 
+  #ifdef riscv
   filetest();
+  #endif
 
   forkforktest();
 

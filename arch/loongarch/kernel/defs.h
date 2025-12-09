@@ -95,6 +95,10 @@ void*           kalloc(void);
 void            kfree(void *);
 void            kinit(void);
 void            freebytes(uint64* dst);
+int             get_refcnt(void *);
+void            inc_refcnt(void *);
+void            dec_refcnt(void *);
+
 
 // vm.c
 void            tlbinit(void);
@@ -113,6 +117,7 @@ uint64          walkaddr(pagetable_t, uint64);
 int             copyout(pagetable_t, uint64, char *, uint64);
 int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
+int             cow_handler(pagetable_t, uint64);
 
 // apic.c
 void            apic_init(void);
