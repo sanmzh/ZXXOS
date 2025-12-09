@@ -19,8 +19,10 @@ struct spinlock pid_lock;
 
 extern void forkret(void);
 static void freeproc(struct proc *p);
+#ifdef SCHEDULER_MLFQ
 static void mlfq_try_adjust_priority(struct proc* p);
 static inline int mlfq_timeslice_for_priority(int priority);
+#endif
 
 extern char trampoline[]; // trampoline.S
 

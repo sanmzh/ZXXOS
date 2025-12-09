@@ -147,7 +147,7 @@ CFLAGS += -Driscv
 CFLAGS += -DNET_TESTS_PORT=$(SERVERPORT)		# LAB_NET
 # CFLAGS += -DSCHEDULER_RR				# 启用RR调度器
 # CFLAGS += -DSCHEDULER_PRIORITY			# 启用优先级调度器
-CFLAGS += -DSCHEDULER_MLFQ			# 启用MLFQ调度器
+# CFLAGS += -DSCHEDULER_MLFQ			# 启用MLFQ调度器
 
 # Disable PIE when possible (for Ubuntu 16.10 toolchain)
 ifneq ($(shell $(CC) -dumpspecs 2>/dev/null | grep -e '[^f]no-pie'),)
@@ -309,7 +309,7 @@ ifeq ($(ARCH),riscv)
 UPROGS += $U/_grind\
     $U/_wc\
 	$U/_zombie\
-	$U/_rrtest\
+#	$U/_rrtest\
 	$U/_prioritytest\
 	$U/_test_proc_mlfq\
 #	$U/_tcpecho\
