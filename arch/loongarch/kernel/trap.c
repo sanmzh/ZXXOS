@@ -74,6 +74,9 @@ usertrap(void)
     uint32 exc_code = (r_csr_estat() >> 16) & 0xFFFF;
     if(exc_code==0x4) {
       uint64 va=r_csr_badv();
+      if(va<MAXVA)
+      {
+         
       pte_t *pte = walk(p->pagetable, va, 0);
       if((*pte & PTE_COW) && ~(*pte & PTE_W)) {
         if(cow_handler(p->pagetable, va) == 0) {
@@ -86,11 +89,13 @@ usertrap(void)
         }
 
       }
+      }
     }
 
     printf("usertrap(): unexpected trapcause %x pid=%d\n", r_csr_estat(), p->pid);
     printf("            era=%p badi=%x\n", r_csr_era(), r_csr_badi());
     p->killed = 1;
+    exit(-1);
   }
 done:
   if(p->killed)

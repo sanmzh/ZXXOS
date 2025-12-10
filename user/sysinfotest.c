@@ -87,7 +87,6 @@ testmem() {
 void
 testcall() {
   struct sysinfo info;
-  
   if (sysinfo(&info) < 0) {
     printf("FAIL: sysinfo failed\n");
     exit(1);

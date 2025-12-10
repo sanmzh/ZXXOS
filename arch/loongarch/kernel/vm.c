@@ -48,8 +48,9 @@ pte_t *
 walk(pagetable_t pagetable, uint64 va, int alloc)
 {
   if(va >= MAXVA)
+  {
     panic("walk");
-
+  }
   for(int level = 3; level > 0; level--) {
     pte_t *pte = &pagetable[PX(level, va)];
     if(*pte & PTE_V) {
@@ -127,7 +128,7 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
 
   if((va % PGSIZE) != 0)
     panic("uvmunmap: not aligned");
-
+  
   for(a = va; a < va + npages*PGSIZE; a += PGSIZE){
     if((pte = walk(pagetable, a, 0)) == 0)
       panic("uvmunmap: walk");
@@ -318,6 +319,10 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
   while(len > 0){
     va0 = PGROUNDDOWN(dstva);
     pa0 = walkaddr(pagetable, va0);
+    if(va0>=MAXVA)
+    {
+      return -1;
+    }
     pte = walk(pagetable, va0, 0);
     if(pa0 == 0)
       return -1;
@@ -326,7 +331,10 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
       // 处理 COW 页面
       if(cow_handler(pagetable, va0) < 0)
         return -1;
-      
+      if(va0>=MAXVA)
+      {
+      return -1;
+      }
       // 重新获取页表项，因为 cow_handler 可能已经修改了它
       pte = walk(pagetable, va0, 0);
       if(pte == 0 || (*pte & PTE_V) == 0)
@@ -422,7 +430,10 @@ cow_handler(pagetable_t pagetable, uint64 va)
     return -1;
 
   va = PGROUNDDOWN(va); // 向下取整
-  
+  if(va>=MAXVA)
+  {
+      return -1;
+  }
   pte_t *pte = walk(pagetable, va, 0);
   if(pte == 0 || (*pte & PTE_V) == 0 || (*pte & PTE_COW) == 0)
     return -1;
