@@ -235,7 +235,7 @@ tags: $(OBJS) _init
 	etags *.S *.c
 endif
 
-ULIB = $U/ulib.o $U/usys.o $U/printf.o $U/umalloc.o $U/pwd.o
+ULIB = $U/ulib.o $U/usys.o $U/printf.o $U/umalloc.o 
 
 $U/ulib.o: $(AR)/$A/$U/ulib.c
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -248,7 +248,7 @@ $U/umalloc.o: $U/umalloc.c
 
 ifeq ($(ARCH),riscv)
 # ifeq ($(LAB),lock)
-ULIB += $U/statistics.o
+ULIB += $U/statistics.o $U/pwd.o $U/hash.o
 # endif
 endif
 

@@ -9,7 +9,11 @@
 #include "user/user.h"
 #include "kernel/fcntl.h"
 
+#ifdef riscv
+char *argv[] = { "login", 0 };
+#else
 char *argv[] = { "sh", 0 };
+#endif
 
 int
 main(void)
@@ -28,15 +32,24 @@ main(void)
   dup(0);  // stderr
 
   for(;;){
+    #ifdef riscv
+    printf("init: riscv login\n");
+    #else
     printf("init: starting sh\n");
+    #endif
     pid = fork();
     if(pid < 0){
       printf("init: fork failed\n");
       exit(1);
     }
     if(pid == 0){
+      #ifdef riscv
+      exec("login", argv);
+      printf("init: riscv exec login failed\n");
+      #else
       exec("sh", argv);
       printf("init: exec sh failed\n");
+      #endif
       exit(1);
     }
 

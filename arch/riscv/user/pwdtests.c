@@ -2,21 +2,25 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 #include "user/pwd.h"
+#include "user/hash.h"
 #include "kernel/fcntl.h"
 
 void
 test_putpwent(char *name, char *password, uint uid, uint gid, char *gecos, char *dir, char *shell)
 {
-  uint rand = get_random();
-  uint hash = get_hash((uchar*)password, strlen(password), rand);
+  unsigned int rand = hash_rand();
+//   unsigned int hash = jenkins_one_at_a_time_hash(password, strlen(password));
+  char hashed_password[32];
+  generate_hashed_password_with_salt(password, rand, hashed_password);
+  
   const struct passwd p = {
-    name,
-    {hash, rand},
-    uid,
-    gid,
-    gecos,
-    dir,
-    shell
+    .pw_name = name,
+    .pw_passwd = hashed_password,
+    .pw_uid = uid,
+    .pw_gid = gid,
+    .pw_gecos = gecos,
+    .pw_dir = dir,
+    .pw_shell = shell
   };
   putpwent(&p);
 }
@@ -26,17 +30,16 @@ test_getpwent(void)
 {
   struct passwd *p = getpwent();
   if (p) {
-    printf("%s:%d$%d:%d:%d:%s:%s:%s\n",
-        p->name,
-        p->p_passwd.hash,
-        p->p_passwd.rand,
-        p->uid,
-        p->gid,
-        p->gecos,  // user information
-        p->dir,    // home dir
-        p->shell   // shell program
+    printf("%s:%s:%d:%d:%s:%s:%s\n",
+        p->pw_name,
+        p->pw_passwd,
+        p->pw_uid,
+        p->pw_gid,
+        p->pw_gecos,  // user information
+        p->pw_dir,    // home dir
+        p->pw_shell   // shell program
         );
-    free(p);
+    // 不需要释放p，因为它指向静态变量
   }
 }
 
@@ -45,17 +48,16 @@ test_getpwuid(uint uid)
 {
   struct passwd *p = getpwuid(uid);
   if (p) {
-    printf("%s:%d$%d:%d:%d:%s:%s:%s\n",
-        p->name,
-        p->p_passwd.hash,
-        p->p_passwd.rand,
-        p->uid,
-        p->gid,
-        p->gecos,  // user information
-        p->dir,    // home dir
-        p->shell   // shell program
+    printf("%s:%s:%d:%d:%s:%s:%s\n",
+        p->pw_name,
+        p->pw_passwd,
+        p->pw_uid,
+        p->pw_gid,
+        p->pw_gecos,  // user information
+        p->pw_dir,    // home dir
+        p->pw_shell   // shell program
         );
-    free(p);
+    // 不需要释放p，因为它指向静态变量
   } else {
     printf("entry with uid %d not found\n", uid);
   }
@@ -66,17 +68,16 @@ test_getpwnam(char *nam)
 {
   struct passwd *p = getpwnam(nam);
   if (p) {
-    printf("%s:%d$%d:%d:%d:%s:%s:%s\n",
-        p->name,
-        p->p_passwd.hash,
-        p->p_passwd.rand,
-        p->uid,
-        p->gid,
-        p->gecos,  // user information
-        p->dir,    // home dir
-        p->shell   // shell program
+    printf("%s:%s:%d:%d:%s:%s:%s\n",
+        p->pw_name,
+        p->pw_passwd,
+        p->pw_uid,
+        p->pw_gid,
+        p->pw_gecos,  // user information
+        p->pw_dir,    // home dir
+        p->pw_shell   // shell program
         );
-    free(p);
+    // 不需要释放p，因为它指向静态变量
   } else {
     printf("entry with name %s not found\n", nam);
   }

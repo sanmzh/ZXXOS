@@ -92,3 +92,12 @@ entry("msgctl");
 entry("set_timeslice");
 entry("set_priority");
 entry("get_priority");
+
+# 身份认证相关系统调用
+entry("getuid");
+entry("getgid");
+entry("setuid");
+entry("setgid");
+
+# 文件定位相关系统调用
+entry("seek");

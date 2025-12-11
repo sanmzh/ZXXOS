@@ -374,7 +374,9 @@ kfork(void)
 
   pid = np->pid;
 
-  // TODO: ensure that child process inherits UID, GID from parent
+  // 确保子进程继承父进程的UID和GID
+  np->uid = p->uid;
+  np->gid = p->gid;
 
   release(&np->lock);
 

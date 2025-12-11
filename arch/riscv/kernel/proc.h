@@ -167,5 +167,7 @@ struct proc {
   int base_priority;            // 记录用户设置的基础优先级，用于同级队列的 FIFO 判定
   #endif
 
-   // TODO: create UID, GID fields
+   // 进程身份信息
+  uint uid;                    // 用户ID
+  uint gid;                    // 组ID
 };

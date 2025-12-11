@@ -24,7 +24,47 @@ sys_getpid(void)
   return myproc()->pid;
 }
 
-// TODO: write getuid, setuid, getgid, setgid
+uint64
+sys_getuid(void)
+{
+  return myproc()->uid;
+}
+
+uint64
+sys_getgid(void)
+{
+  return myproc()->gid;
+}
+
+uint64
+sys_setuid(void)
+{
+  int uid;
+  if(argint(0, &uid) < 0)
+    return -1;
+  
+  // 只有root用户(UID=0)可以设置UID为任何值
+  if(myproc()->uid != 0)
+    return -1;
+    
+  myproc()->uid = uid;
+  return 0;
+}
+
+uint64
+sys_setgid(void)
+{
+  int gid;
+  if(argint(0, &gid) < 0)
+    return -1;
+  
+  // 只有root用户(UID=0)可以设置GID为任何值
+  if(myproc()->uid != 0)
+    return -1;
+    
+  myproc()->gid = gid;
+  return 0;
+}
 
 uint64
 sys_fork(void)

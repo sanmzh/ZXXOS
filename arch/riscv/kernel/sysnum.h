@@ -108,4 +108,13 @@
 #define SYS_set_priority 401  // PRIORITY / MLFQ 算法：设置当前进程的优先级
 #define SYS_get_priority 402  // PRIORITY / MLFQ 算法：获取当前进程的优先级
 
+// 身份认证相关
+#define SYS_getuid     300   // 获取用户ID
+#define SYS_getgid     301   // 获取组ID
+#define SYS_setuid     302   // 设置用户ID
+#define SYS_setgid     303   // 设置组ID
+
+// 文件定位相关
+#define SYS_seek       304   // 文件定位
+
 #endif // _SYS_H

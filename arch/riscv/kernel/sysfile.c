@@ -613,3 +613,48 @@ sys_munmap(void)
 
   return 0;
 }
+
+uint64
+sys_seek(void)
+{
+  struct file *f;
+  int fd, offset, whence;
+  
+  if(argfd(0, &fd, &f) < 0)
+    return -1;
+  if(argint(1, &offset) < 0)
+    return -1;
+  if(argint(2, &whence) < 0)
+    return -1;
+  
+  // 只支持对普通文件进行seek操作
+  if(f->type != FD_INODE)
+    return -1;
+  
+  // 根据whence参数设置文件偏移量
+  switch(whence) {
+    case 0: // SEEK_SET - 从文件开头计算偏移量
+      if(offset < 0)
+        return -1;
+      f->off = offset;
+      break;
+    case 1: // SEEK_CUR - 从当前位置计算偏移量
+      if(f->off + offset < 0)
+        return -1;
+      f->off += offset;
+      break;
+    case 2: // SEEK_END - 从文件末尾计算偏移量
+      ilock(f->ip);
+      if(f->ip->size + offset < 0) {
+        iunlock(f->ip);
+        return -1;
+      }
+      f->off = f->ip->size + offset;
+      iunlock(f->ip);
+      break;
+    default:
+      return -1;
+  }
+  
+  return f->off;
+}

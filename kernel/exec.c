@@ -97,6 +97,12 @@ my_exec(char *path, char **argv)
 
   p = myproc();
   uint64 oldsz = p->sz;
+  
+  #ifdef riscv
+  // 保存进程的UID和GID，以便在新程序中保留
+  uint old_uid = p->uid;
+  uint old_gid = p->gid;
+  #endif
 
   // Allocate some pages at the next page boundary.
   // Make the first inaccessible as a stack guard.
@@ -166,6 +172,12 @@ my_exec(char *path, char **argv)
   #endif
   p->trapframe->sp = sp; // initial stack pointer
   proc_freepagetable(oldpagetable, oldsz);
+  
+  #ifdef riscv
+  // 恢复进程的UID和GID
+  p->uid = old_uid;
+  p->gid = old_gid;
+  #endif
 
   return argc; // this ends up in a0, the first argument to main(argc, argv)
 
