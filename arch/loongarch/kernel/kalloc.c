@@ -50,8 +50,23 @@ freerange(void *pa_start, void *pa_end)
 {
   char *p;
   p = (char*)PGROUNDUP((uint64)pa_start);
-  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE)
-    kfree(p);
+  push_off();
+  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE) {
+    struct run *r;
+
+    // Fill with junk to catch dangling refs.
+    memset(p, 1, PGSIZE);
+
+    r = (struct run*)p;
+
+    acquire(&kmem.lock);
+    r->next = kmem.freelist;
+    kmem.freelist = r;
+    release(&kmem.lock);
+  }
+
+  pop_off();
+
 }
 
 // Free the page of physical memory pointed at by v,
@@ -66,12 +81,22 @@ kfree(void *pa)
   if(((uint64)pa % PGSIZE) != 0 || (uint64)pa < RAMBASE || (uint64)pa >= RAMSTOP)
     panic("kfree");
 
-  // 减少引用计数
-  dec_refcnt(pa);
-  
-  // 只有引用计数为0时才真正释放
-  if(get_refcnt(pa) > 0)
-    return;
+  // 获取当前引用计数
+  acquire(&refcnt.lock);
+  int idx = ((uint64)pa - RAMBASE) / PGSIZE;
+  if(refcnt.ref_count[idx] > 0) {
+    refcnt.ref_count[idx]--;
+    if(refcnt.ref_count[idx] > 0) {
+      release(&refcnt.lock);
+      return;
+    }
+  } else if(refcnt.ref_count[idx] < 0) {
+    // 引用计数为负数，重置为0并打印警告
+    printf("kfree: warning: refcnt is negative for pa %p, resetting to 0", pa);
+    refcnt.ref_count[idx] = 0;
+  }
+  release(&refcnt.lock);
+
 
   // Fill with junk to catch dangling refs.
   memset(pa, 1, PGSIZE);
@@ -155,6 +180,21 @@ dec_refcnt(void *pa)
   int idx = ((uint64)pa - RAMBASE) / PGSIZE;
   acquire(&refcnt.lock);
   refcnt.ref_count[idx]--;
+  if(refcnt.ref_count[idx] == 0) {
+    release(&refcnt.lock);
+    // 引用计数为0，直接释放页面到空闲列表
+    // 不调用kfree，避免递归
+    struct run *r = (struct run*)pa;
+    memset(pa, 1, PGSIZE); // Fill with junk to catch dangling refs.
+
+    push_off();
+    acquire(&kmem.lock);
+    r->next = kmem.freelist;
+    kmem.freelist = r;
+    release(&kmem.lock);
+    pop_off();
+    return;
+  }
   release(&refcnt.lock);
 }
 

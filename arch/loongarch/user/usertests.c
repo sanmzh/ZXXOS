@@ -1807,7 +1807,10 @@ manywrites(char *s)
     int st = 0;
     wait(&st);
     if(st != 0)
+    {
+      printf("1");
       exit(st);
+    }
   }
   exit(0);
 }

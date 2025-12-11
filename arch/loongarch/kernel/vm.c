@@ -5,6 +5,8 @@
 #include "loongarch.h"
 #include "defs.h"
 #include "fs.h"
+#include "spinlock.h"
+#include "proc.h"
 
 void
 tlbinit(void)
@@ -323,6 +325,13 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
     {
       return -1;
     }
+    // 检查地址是否在进程的有效地址范围内
+    // 注意：在exec过程中，pagetable可能不是当前进程的pagetable，
+    // 所以需要特殊处理这种情况
+    struct proc *curproc = myproc();
+    if(curproc && curproc->pagetable == pagetable && va0 >= curproc->sz)
+      return -1;
+
     pte = walk(pagetable, va0, 0);
     if(pa0 == 0)
       return -1;
@@ -340,6 +349,13 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
       if(pte == 0 || (*pte & PTE_V) == 0)
         return -1;
       // 更新 pa0，因为 cow_handler 可能已经修改了页表项
+      // 检查地址是否在进程的有效地址范围内
+      // 注意：在exec过程中，pagetable可能不是当前进程的pagetable，
+      // 所以需要特殊处理这种情况
+      struct proc *curproc = myproc();
+      if(curproc && curproc->pagetable == pagetable && va0 >= curproc->sz)
+        return -1;
+    
       pa0 = PTE2PA(*pte);
     }
     n = PGSIZE - (dstva - va0);
@@ -453,7 +469,10 @@ cow_handler(pagetable_t pagetable, uint64 va)
     // 内存分配失败，杀死进程
     struct proc *p = myproc();
     if(p) {
-      panic("cow_handler: out of memory, killing process");
+      printf("cow_handler: out of memory, killing process %d\n", p->pid);
+      p->killed=1;
+      return -1;
+
     }
     return -1;
   }
