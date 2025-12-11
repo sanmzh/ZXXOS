@@ -170,4 +170,6 @@ struct proc {
    // 进程身份信息
   uint uid;                    // 用户ID
   uint gid;                    // 组ID
+  // TODO!!!: create UID, GID fields
+  // TODO!!!: create set-user-ID capability
 };

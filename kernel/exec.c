@@ -4,6 +4,9 @@
 #ifdef riscv
 #define my_exec kexec 
 #include "riscv.h"
+#include "sleeplock.h"
+#include "fs.h"
+#include "file.h"
 #endif
 #ifdef loongarch
 #include "loongarch.h"
@@ -91,6 +94,9 @@ my_exec(char *path, char **argv)
     if(loadseg(pagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0)
       goto bad;
   }
+  // TODO!!!: set program set-user-ID capability
+
+
   iunlockput(ip);
   end_op();
   ip = 0;

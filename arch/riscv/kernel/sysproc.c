@@ -66,6 +66,8 @@ sys_setgid(void)
   return 0;
 }
 
+// TODO!!!: write getuid, setuid, getgid, setgid
+
 uint64
 sys_fork(void)
 {
