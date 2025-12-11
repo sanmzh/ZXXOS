@@ -166,4 +166,6 @@ struct proc {
   int sleep_ticks;              // 最近窗口内的休眠 tick 数
   int base_priority;            // 记录用户设置的基础优先级，用于同级队列的 FIFO 判定
   #endif
+
+   // TODO: create UID, GID fields
 };

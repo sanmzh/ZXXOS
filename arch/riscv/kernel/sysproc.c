@@ -24,6 +24,8 @@ sys_getpid(void)
   return myproc()->pid;
 }
 
+// TODO: write getuid, setuid, getgid, setgid
+
 uint64
 sys_fork(void)
 {
