@@ -316,6 +316,7 @@ UPROGS += $U/_grind\
 	$U/_chown\
 	$U/_chmod\
 	$U/_perms_test\
+	$U/_aslrtest\
 #	$U/_rrtest\
 	$U/_prioritytest\
 	$U/_test_proc_mlfq\

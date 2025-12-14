@@ -17,6 +17,27 @@
 #include "proc.h"
 #include "defs.h"
 #include "elf.h"
+
+// ASLR random seed declaration
+extern uint64 g_random_seed;
+
+// Generate a random number between min and max using g_random_seed
+int get_random_min_max(int min, int max) 
+{
+  if (min > max) {
+    int temp = min;
+    min = max;
+    max = temp;
+  }
+  
+  // Update the random seed using a simple linear congruential generator
+  g_random_seed = g_random_seed * 1103515245 + 12345;
+  
+  // Generate a random number in the specified range
+  int randomNum = min + (g_random_seed % (max - min + 1));
+  
+  return randomNum;
+}
 #ifdef riscv
 static int loadseg(pde_t *, uint64, struct inode *, uint, uint);
 // map ELF permissions to PTE permission bits.
@@ -47,6 +68,14 @@ my_exec(char *path, char **argv)
   struct proghdr ph;
   pagetable_t pagetable = 0, oldpagetable;
   struct proc *p = myproc();
+  
+  // ASLR flag - set to 1 to enable ASLR, 0 to disable
+  // Only enable ASLR for RISC-V architecture
+  #ifdef riscv
+  int aslr_enabled = 1;  // Re-enable ASLR with heap randomization only
+  #else
+  int aslr_enabled = 0;
+  #endif
 
   begin_op();
 
@@ -68,6 +97,11 @@ my_exec(char *path, char **argv)
   if((pagetable = proc_pagetable(p)) == 0)
     goto bad;
 
+  // ASLR: Calculate base offset for code segment
+  // Disable code segment randomization to avoid breaking relative addressing
+  int base_pointer_offset = 0;  // aslr_enabled ? get_random_min_max(0, 1) : 0;
+  uint64 text_seg_pages_offset = base_pointer_offset * PGSIZE;
+
   // Load program into memory.
   for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
     if(readi(ip, 0, (uint64)&ph, off, sizeof(ph)) != sizeof(ph))
@@ -82,7 +116,7 @@ my_exec(char *path, char **argv)
     #ifdef riscv
     if(ph.vaddr % PGSIZE != 0)
       goto bad;
-    if((sz1 = uvmalloc(pagetable, sz, ph.vaddr + ph.memsz, flags2perm(ph.flags))) == 0)
+    if((sz1 = uvmalloc(pagetable, sz, ph.vaddr + ph.memsz + text_seg_pages_offset, flags2perm(ph.flags))) == 0)
       goto bad;
     #endif
     #ifdef loongarch
@@ -92,8 +126,13 @@ my_exec(char *path, char **argv)
       goto bad;
     #endif
     sz = sz1;
+    #ifdef riscv
+    if(loadseg(pagetable, ph.vaddr + text_seg_pages_offset, ip, ph.off, ph.filesz) < 0)
+      goto bad;
+    #else
     if(loadseg(pagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0)
       goto bad;
+    #endif
   }
   // TODO!!!: set program set-user-ID capability
 
@@ -116,12 +155,29 @@ my_exec(char *path, char **argv)
   // Use the rest as the user stack.
   sz = PGROUNDUP(sz);
   uint64 sz1;
+  
+  // ASLR: Randomize heap size
+  int num_pages = 2;  // Base number of pages
+  if (aslr_enabled) {
+    int add_pages = get_random_min_max(0, 8);
+    num_pages += add_pages;
+  }
+  
   #ifdef riscv
-  if((sz1 = uvmalloc(pagetable, sz, sz + (USERSTACK+1)*PGSIZE, PTE_W)) == 0)
+  if((sz1 = uvmalloc(pagetable, sz, sz + (USERSTACK+num_pages)*PGSIZE, PTE_W)) == 0)
     goto bad;
   sz = sz1;
-  uvmclear(pagetable, sz-(USERSTACK+1)*PGSIZE);
+  uvmclear(pagetable, sz-(USERSTACK+num_pages)*PGSIZE);
   sp = sz;
+  
+  // ASLR: Randomize stack offset
+  // Temporarily disable stack randomization to test heap randomization
+  // if (aslr_enabled) {
+  //   int stack_offset = get_random_min_max(0, 16);
+  //   sp -= stack_offset * 64;  // Adjust stack pointer by random offset
+  //   sp -= num_pages * PGSIZE;  // Adjust for additional pages
+  // }
+  
   stackbase = sp - USERSTACK*PGSIZE;
   #endif
   #ifdef loongarch
@@ -130,6 +186,14 @@ my_exec(char *path, char **argv)
   sz = sz1;
   uvmclear(pagetable, sz-2*PGSIZE);
   sp = sz;
+  
+  // ASLR: Randomize stack offset
+  // Temporarily disable stack randomization to test heap randomization
+  // if (aslr_enabled) {
+  //   int stack_offset = get_random_min_max(0, 16);
+  //   sp -= stack_offset * 64;  // Adjust stack pointer by random offset
+  // }
+  
   stackbase = sp - PGSIZE;
   #endif
 
@@ -172,7 +236,7 @@ my_exec(char *path, char **argv)
   p->pagetable = pagetable;
   p->sz = sz;
   #ifdef riscv
-  p->trapframe->epc = elf.entry;  // initial program counter = ulib.c:start()
+  p->trapframe->epc = elf.entry + text_seg_pages_offset;  // initial program counter = ulib.c:start()
   #endif
   #ifdef loongarch
   p->trapframe->era = elf.entry;  // initial program counter = ulib.c:start()

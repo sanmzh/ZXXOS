@@ -17,6 +17,9 @@ struct proc *initproc;
 int nextpid = 1;
 struct spinlock pid_lock;
 
+// ASLR random seed
+uint64 g_random_seed = 12345;
+
 extern void forkret(void);
 static void freeproc(struct proc *p);
 #ifdef SCHEDULER_MLFQ
