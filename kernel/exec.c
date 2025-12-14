@@ -18,23 +18,21 @@
 #include "defs.h"
 #include "elf.h"
 
-// ASLR random seed declaration
-extern uint64 g_random_seed;
+
+// ASLR random seed
+uint64 g_random_seed = 12345;
 
 // Generate a random number between min and max using g_random_seed
 int get_random_min_max(int min, int max) 
 {
-  if (min > max) {
-    int temp = min;
-    min = max;
-    max = temp;
-  }
+  int randomNum = 0;
+  // use g_random_seed as seed
+  extern uint64 g_random_seed;
   
-  // Update the random seed using a simple linear congruential generator
+  // logic to create a number between min and max values passed using g_random_seed
+  // and assign it to randomNum
   g_random_seed = g_random_seed * 1103515245 + 12345;
-  
-  // Generate a random number in the specified range
-  int randomNum = min + (g_random_seed % (max - min + 1));
+  randomNum = (g_random_seed / 65536) % (max - min + 1) + min;
   
   return randomNum;
 }
@@ -97,10 +95,13 @@ my_exec(char *path, char **argv)
   if((pagetable = proc_pagetable(p)) == 0)
     goto bad;
 
-  // ASLR: Calculate base offset for code segment
-  // Disable code segment randomization to avoid breaking relative addressing
-  int base_pointer_offset = 0;  // aslr_enabled ? get_random_min_max(0, 1) : 0;
-  uint64 text_seg_pages_offset = base_pointer_offset * PGSIZE;
+  #ifdef riscv
+  //If aslr flag is on, create variable base_pointer_offset and assign it value returned from get_random_min_max(0,16), if flag is off then assign 0
+  int base_pointer_offset = aslr_enabled ? get_random_min_max(0, 16) : 0;
+  
+  //If aslr flag is on, create variable text_seg_pages_offset and assign its value as base_pointer_offset * PGSIZE, else assign 0
+  uint64 text_seg_pages_offset = aslr_enabled ? base_pointer_offset * PGSIZE : 0;
+  #endif
 
   // Load program into memory.
   for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
@@ -116,6 +117,7 @@ my_exec(char *path, char **argv)
     #ifdef riscv
     if(ph.vaddr % PGSIZE != 0)
       goto bad;
+    // add text_seg_pages_offset to newsz parameter of uvmalloc to allocate additional space
     if((sz1 = uvmalloc(pagetable, sz, ph.vaddr + ph.memsz + text_seg_pages_offset, flags2perm(ph.flags))) == 0)
       goto bad;
     #endif
@@ -126,6 +128,7 @@ my_exec(char *path, char **argv)
       goto bad;
     #endif
     sz = sz1;
+    //add text_seg_pages_offset to ph.vaddr to include offset while loading pagetable
     #ifdef riscv
     if(loadseg(pagetable, ph.vaddr + text_seg_pages_offset, ip, ph.off, ph.filesz) < 0)
       goto bad;
@@ -156,8 +159,12 @@ my_exec(char *path, char **argv)
   sz = PGROUNDUP(sz);
   uint64 sz1;
   
-  // ASLR: Randomize heap size
-  int num_pages = 2;  // Base number of pages
+  //Change the heap address if aslr flag is set*/
+  //create variable num_pages and initialise its value as 2
+  int num_pages = 2;
+  //replace 2 by variable num_pages in below uvmalloc statement
+  // create variable add_pages if aslr flag is on and assign num_pages +  get_random_min_max(0,8) to it
+  //add add_pages to num_pages and replace 2 with num_pages
   if (aslr_enabled) {
     int add_pages = get_random_min_max(0, 8);
     num_pages += add_pages;
@@ -170,29 +177,40 @@ my_exec(char *path, char **argv)
   uvmclear(pagetable, sz-(USERSTACK+num_pages)*PGSIZE);
   sp = sz;
   
-  // ASLR: Randomize stack offset
-  // Temporarily disable stack randomization to test heap randomization
-  // if (aslr_enabled) {
-  //   int stack_offset = get_random_min_max(0, 16);
-  //   sp -= stack_offset * 64;  // Adjust stack pointer by random offset
-  //   sp -= num_pages * PGSIZE;  // Adjust for additional pages
-  // }
+  //if aslr flag is on, create variable stack_offset and assign it value returned from get_random_min_max(0,16)
+  //change stack pointer sp by substracting stack_offset*64 from sz
+  if (aslr_enabled) {
+    int stack_offset = get_random_min_max(0, 16);
+    sp -= stack_offset * 64;  // Adjust stack pointer by random offset
+  }
   
+  //if aslr flag is on, substract num_pages * PGSIZE from sp and assign it to stackbase
   stackbase = sp - USERSTACK*PGSIZE;
   #endif
   #ifdef loongarch
-  if((sz1 = uvmalloc(pagetable, sz, sz + 2*PGSIZE)) == 0)
+  //Change the heap address if aslr flag is set*/
+  //create variable num_pages and initialise its value as 2
+  int loongarch_num_pages = 2;
+  //replace 2 by variable num_pages in below uvmalloc statement
+  // create variable add_pages if aslr flag is on and assign num_pages +  get_random_min_max(0,8) to it
+  //add add_pages to num_pages and replace 2 with num_pages
+  if (aslr_enabled) {
+    int add_pages = get_random_min_max(0, 8);
+    loongarch_num_pages += add_pages;
+  }
+  
+  if((sz1 = uvmalloc(pagetable, sz, sz + loongarch_num_pages*PGSIZE)) == 0)
     goto bad;
   sz = sz1;
-  uvmclear(pagetable, sz-2*PGSIZE);
+  uvmclear(pagetable, sz-loongarch_num_pages*PGSIZE);
   sp = sz;
   
-  // ASLR: Randomize stack offset
-  // Temporarily disable stack randomization to test heap randomization
-  // if (aslr_enabled) {
-  //   int stack_offset = get_random_min_max(0, 16);
-  //   sp -= stack_offset * 64;  // Adjust stack pointer by random offset
-  // }
+  //if aslr flag is on, create variable stack_offset and assign it value returned from get_random_min_max(0,16)
+  //change stack pointer sp by substracting stack_offset*64 from sz
+  if (aslr_enabled) {
+    int stack_offset = get_random_min_max(0, 16);
+    sp -= stack_offset * 64;  // Adjust stack pointer by random offset
+  }
   
   stackbase = sp - PGSIZE;
   #endif
@@ -235,11 +253,13 @@ my_exec(char *path, char **argv)
   oldpagetable = p->pagetable;
   p->pagetable = pagetable;
   p->sz = sz;
+  
+  // add text_seg_pages_offset to elf.entry to change address of main
   #ifdef riscv
-  p->trapframe->epc = elf.entry + text_seg_pages_offset;  // initial program counter = ulib.c:start()
+  p->trapframe->epc = elf.entry + text_seg_pages_offset;  // initial program counter = main
   #endif
   #ifdef loongarch
-  p->trapframe->era = elf.entry;  // initial program counter = ulib.c:start()
+  p->trapframe->era = elf.entry;  // initial program counter = main
   #endif
   p->trapframe->sp = sp; // initial stack pointer
   proc_freepagetable(oldpagetable, oldsz);
