@@ -181,6 +181,9 @@ void            syscall();
 int             argfd(int, int*, struct file**);
 int             fdalloc(struct file*);
 
+// sysfile.c - 文件定位相关
+uint64          sys_seek(void);
+
 // time.c
 time_t          time(time_t*);
 int             gettimeofday(struct timeval*, void*);

@@ -28,6 +28,11 @@ struct inode {
   short nlink;
   uint size;
   uint addrs[NDIRECT+1];
+  #ifdef riscv
+  uint mode;          // File permission mode
+  uint uid;           // User ID
+  uint gid;           // Group ID
+  #endif 
 };
 
 // map major device number to device functions.

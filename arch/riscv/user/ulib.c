@@ -18,6 +18,9 @@ start(int argc, char **argv)
   exit(r);
 }
 
+// Return a integer between 0 and ((2^32 - 1) / 2), which is 2147483647.
+unsigned short lfsr = 0;
+
 char*
 strcpy(char *s, const char *t)
 {
@@ -35,6 +38,62 @@ strcmp(const char *p, const char *q)
   while(*p && *p == *q)
     p++, q++;
   return (uchar)*p - (uchar)*q;
+}
+
+char*
+strcat(char *s, const char *t)
+{
+  char *os = s;
+  while(*s)
+    s++;
+  while((*s++ = *t++) != 0)
+    ;
+  return os;
+}
+
+void
+itoa(int num, char *str, int base)
+{
+  int i = 0;
+  int isNegative = 0;
+  
+  // 处理0的特殊情况
+  if (num == 0) {
+    str[i++] = '0';
+    str[i] = '\0';
+    return;
+  }
+  
+  // 处理负数
+  if (num < 0 && base == 10) {
+    isNegative = 1;
+    num = -num;
+  }
+  
+  // 转换数字
+  while (num != 0) {
+    int rem = num % base;
+    str[i++] = (rem > 9) ? (rem - 10) + 'a' : rem + '0';
+    num = num / base;
+  }
+  
+  // 添加负号
+  if (isNegative) {
+    str[i++] = '-';
+  }
+  
+  str[i] = '\0'; // 字符串终止
+  
+  // 反转字符串
+  int start = 0;
+  int end = i - 1;
+  while (start < end) {
+    char temp = str[start];
+    str[start] = str[end];
+    str[end] = temp;
+    start++;
+    end--;
+  }
 }
 
 uint

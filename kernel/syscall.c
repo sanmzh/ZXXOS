@@ -175,6 +175,19 @@ extern uint64 sys_set_priority(void);
 extern uint64 sys_get_priority(void);
 #endif
 
+// 身份认证相关系统调用
+extern uint64 sys_getuid(void);
+extern uint64 sys_getgid(void);
+extern uint64 sys_setuid(void);
+extern uint64 sys_setgid(void);
+
+// 文件定位相关系统调用
+extern uint64 sys_seek(void);
+
+// 文件权限相关系统调用
+extern uint64 sys_chown(void);
+extern uint64 sys_chmod(void);
+
 #endif
 
 #ifdef loongarch
@@ -262,6 +275,21 @@ static uint64 (*syscalls[])(void) = {
 [SYS_set_priority]  sys_set_priority,
 [SYS_get_priority]  sys_get_priority,
 #endif
+
+// 身份认证相关系统调用
+[SYS_getuid]  sys_getuid,
+[SYS_getgid]  sys_getgid,
+[SYS_setuid]  sys_setuid,
+[SYS_setgid]  sys_setgid,
+
+// 文件定位相关系统调用
+[SYS_seek]    sys_seek,
+
+// 文件权限相关系统调用
+[SYS_chown]   sys_chown,
+[SYS_chmod]   sys_chmod,
+
+
 
 #endif    // riscv
 #ifdef loongarch

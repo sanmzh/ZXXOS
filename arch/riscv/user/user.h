@@ -56,7 +56,20 @@ int cpupin(int);
 // 调度器相关系统调用
 int set_timeslice(int);
 int set_priority(int);
-int get_priority(void);
+int get_priority(int);
+
+// 身份认证相关系统调用
+uint getuid(void);
+uint getgid(void);
+int setuid(uint);
+int setgid(uint);
+
+// 文件定位相关系统调用
+int seek(int, int, int);
+
+// 文件权限相关系统调用
+int chown(const char*, int, int);
+int chmod(const char*, int);
 
 // ulib.c
 int stat(const char*, struct stat*);
@@ -64,6 +77,8 @@ char* strcpy(char*, const char*);
 void *memmove(void*, const void*, int);
 char* strchr(const char*, char c);
 int strcmp(const char*, const char*);
+char* strcat(char*, const char*);
+void itoa(int, char*, int);
 char* gets(char*, int max);
 uint strlen(const char*);
 void* memset(void*, int, uint);

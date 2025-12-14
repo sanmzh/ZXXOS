@@ -235,7 +235,7 @@ tags: $(OBJS) _init
 	etags *.S *.c
 endif
 
-ULIB = $U/ulib.o $U/usys.o $U/printf.o $U/umalloc.o
+ULIB = $U/ulib.o $U/usys.o $U/printf.o $U/umalloc.o 
 
 $U/ulib.o: $(AR)/$A/$U/ulib.c
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -248,7 +248,7 @@ $U/umalloc.o: $U/umalloc.c
 
 ifeq ($(ARCH),riscv)
 # ifeq ($(LAB),lock)
-ULIB += $U/statistics.o
+ULIB += $U/statistics.o $U/pwd.o $U/hash.o
 # endif
 endif
 
@@ -295,13 +295,13 @@ UPROGS=\
 	$U/_mkdir\
 	$U/_rm\
 	$U/_sh\
-	$U/_stressfs\
+#	$U/_stressfs\
 	$U/_trace\
 	$U/_sysinfotest\
 	$U/_usertests\
 	$U/_semtest\
 	$U/_cowtest\
-#	$U/_grind\
+	$U/_grind\
         $U/_wc\
 	$U/_zombie\
 	
@@ -309,6 +309,14 @@ ifeq ($(ARCH),riscv)
 UPROGS += $U/_grind\
     $U/_wc\
 	$U/_zombie\
+	$U/_login\
+	$U/_useradd\
+	$U/_pwdtests\
+	$U/_whoami\
+	$U/_chown\
+	$U/_chmod\
+	$U/_perms_test\
+	$U/_aslrtest\
 #	$U/_rrtest\
 	$U/_prioritytest\
 	$U/_test_proc_mlfq\

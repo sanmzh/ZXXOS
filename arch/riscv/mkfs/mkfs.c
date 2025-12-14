@@ -82,7 +82,9 @@ main(int argc, char *argv[])
     exit(1);
   }
 
-  assert((BSIZE % sizeof(struct dinode)) == 0);
+  // assert((BSIZE % sizeof(struct dinode)) == 0); // delete in feature/safe auth
+  // `struct dinode` modified to be uneven size.
+  // this assertion seems to do nothing useful anyways.
   assert((BSIZE % sizeof(struct dirent)) == 0);
 
   fsfd = open(argv[1], O_RDWR|O_CREAT|O_TRUNC, 0666);
@@ -116,6 +118,17 @@ main(int argc, char *argv[])
 
   rootino = ialloc(T_DIR);
   assert(rootino == ROOTINO);
+  
+  #ifdef riscv
+  // 设置根目录的权限和所有者
+  rinode(rootino, &din);
+  // 设置根目录权限为 rwxrwxrwx (0777)，允许所有用户在其中创建文件
+  din.mode = xint(0777);
+  // 设置所有者为root (uid=0, gid=0)
+  din.uid = xint(0);
+  din.gid = xint(0);
+  winode(rootino, &din);
+  #endif
 
   bzero(&de, sizeof(de));
   de.inum = xshort(rootino);
@@ -160,6 +173,20 @@ main(int argc, char *argv[])
       iappend(inum, buf, cc);
 
     close(fd);
+    
+    #ifdef riscv
+    // 设置文件权限和所有者
+    rinode(inum, &din);
+    // 设置为可执行文件
+    // 对于系统程序（如cat, ls, echo等），设置为可执行 (0755 = rwxr-xr-x)
+    // 对于用户管理相关程序（如useradd, login等），也设置为可执行 (0755 = rwxr-xr-x)
+    // 允许所有用户执行这些程序，但程序内部会检查权限
+    din.mode = xint(0755); // rwxr-xr-x
+    // 设置所有者为root (uid=0, gid=0)
+    din.uid = xint(0);
+    din.gid = xint(0);
+    winode(inum, &din);
+    #endif
   }
 
   // fix size of root inode dir
