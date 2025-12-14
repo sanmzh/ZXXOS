@@ -388,9 +388,19 @@ create(char *path, short type, short major, short minor)
   
   // 设置默认权限模式
   if(type == T_DIR) {
-    ip->mode = 0755; // 目录默认权限: rwxr-xr-x (0755)
+    // 对于目录，root用户创建的目录默认为755，普通用户创建的目录默认为700
+    if(p->uid == 0) {
+      ip->mode = 0755; // root目录权限: rwxr-xr-x (0755)
+    } else {
+      ip->mode = 0700; // 普通用户目录权限: rwx------ (0700)
+    }
   } else {
-    ip->mode = 0644; // 文件默认权限: rw-r--r-- (0644)
+    // 对于文件，root用户创建的文件默认为644，普通用户创建的文件默认为600
+    if(p->uid == 0) {
+      ip->mode = 0644; // root文件权限: rw-r--r-- (0644)
+    } else {
+      ip->mode = 0600; // 普通用户文件权限: rw------- (0600)
+    }
   }
   #endif
 
@@ -908,8 +918,8 @@ sys_chown(void)
 
   ilock(ip);
   
-  // 只有文件所有者或root用户才能修改文件所有权
-  if(p->uid != 0 && p->uid != ip->uid) {
+  // 只有root用户才能修改文件所有权
+  if(p->uid != 0) {
     iunlockput(ip);
     end_op();
     return -1;

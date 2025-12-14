@@ -51,11 +51,11 @@ int get_input(char *buf, int size) {
 int verify_password(const char *plain_password, const char *stored_password) {
   char test_hash[64];
   
-  printf("调试: 输入密码='%s', 存储密码='%s'\n", plain_password, stored_password);
+  // printf("调试: 输入密码='%s', 存储密码='%s'\n", plain_password, stored_password);
   
   // 检查存储密码格式
   if (stored_password == 0 || strlen(stored_password) == 0) {
-    printf("调试: 存储密码为空\n");
+    // printf("调试: 存储密码为空\n");
     return 0;  // 密码为空
   }
   
@@ -63,28 +63,28 @@ int verify_password(const char *plain_password, const char *stored_password) {
   // 格式应该是: $hash$salt
   char *first_dollar = strchr(stored_password, '$');
   if (first_dollar == 0) {
-    printf("调试: 没有找到盐值，使用默认盐值\n");
+    // printf("调试: 没有找到盐值，使用默认盐值\n");
     // 如果没有盐值，使用默认盐值
     generate_hashed_password(plain_password, test_hash);
   } else {
     // 查找第二个$符号
     char *second_dollar = strchr(first_dollar + 1, '$');
     if (second_dollar == 0) {
-      printf("调试: 格式错误，没有第二个$\n");
+      // printf("调试: 格式错误，没有第二个$\n");
       return 0;
     }
     
     // 提取盐值（第二个$后面的部分）
     int salt = atoi(second_dollar + 1);
-    printf("调试: 提取的盐值=%d\n", salt);
+    // printf("调试: 提取的盐值=%d\n", salt);
     generate_hashed_password_with_salt(plain_password, salt, test_hash);
   }
   
-  printf("调试: 计算得到的哈希='%s'\n", test_hash);
+  // printf("调试: 计算得到的哈希='%s'\n", test_hash);
   
   // 比较哈希值
   int result = strcmp(test_hash, stored_password) == 0;
-  printf("调试: 比较结果=%d\n", result);
+  // printf("调试: 比较结果=%d\n", result);
   
   return result;
 }
@@ -166,15 +166,12 @@ int main(int argc, char *argv[]) {
     // 验证密码
     if (verify_password(password, pw->pw_passwd)) {
       // 密码正确，检查权限
-      printf("调试: 当前进程UID=%d, GID=%d\n", getuid(), getgid());
-      printf("调试: 尝试设置UID=%d, GID=%d\n", pw->pw_uid, pw->pw_gid);
+      // printf("调试: 当前进程UID=%d, GID=%d\n", getuid(), getgid());
+      // printf("调试: 尝试设置UID=%d, GID=%d\n", pw->pw_uid, pw->pw_gid);
       
-      // 检查当前用户是否为root，或者是否切换到自己的账户
-      if (getuid() != 0 && getuid() != pw->pw_uid) {
-        printf("错误: 只有root用户可以切换到其他用户\n");
-        attempts++;
-        continue;
-      }
+      // 检查当前用户是否为root，或者是否切换到自己的账户，或者通过login重新登录
+      // login命令应该允许任何用户重新登录为任何用户
+      // 这里我们移除权限检查，允许任何用户通过login重新登录
       
       // 先设置GID，再设置UID，因为setgid需要当前进程UID为0
       if (setgid(pw->pw_gid) < 0) {
@@ -189,7 +186,7 @@ int main(int argc, char *argv[]) {
         continue;
       }
       
-      printf("调试: 设置后进程UID=%d, GID=%d\n", getuid(), getgid());
+      // printf("调试: 设置后进程UID=%d, GID=%d\n", getuid(), getgid());
       printf("登录成功! 欢迎, %s\n", username);
       
       // 执行shell

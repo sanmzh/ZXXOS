@@ -177,8 +177,11 @@ main(int argc, char *argv[])
     #ifdef riscv
     // 设置文件权限和所有者
     rinode(inum, &din);
-    // 设置为可执行文件 (0755 = rwxr-xr-x)
-    din.mode = xint(0755);
+    // 设置为可执行文件
+    // 对于系统程序（如cat, ls, echo等），设置为可执行 (0755 = rwxr-xr-x)
+    // 对于用户管理相关程序（如useradd, login等），也设置为可执行 (0755 = rwxr-xr-x)
+    // 允许所有用户执行这些程序，但程序内部会检查权限
+    din.mode = xint(0755); // rwxr-xr-x
     // 设置所有者为root (uid=0, gid=0)
     din.uid = xint(0);
     din.gid = xint(0);

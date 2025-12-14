@@ -142,9 +142,9 @@ fileread(struct file *f, uint64 addr, int n)
     // root用户拥有所有权限
     if(uid != 0) {
       // 检查读权限
-      if(!((fmode & 1<<8 && uid == fuid) ||    // 所有者读权限 (0400)
-         (fmode & 1<<5 && gid == fgid) ||    // 组读权限 (0040)
-         (fmode & 1<<2))) {                   // 其他用户读权限 (0004)
+      if(!((fmode & 0400 && uid == fuid) ||    // 所有者读权限 (0400)
+         (fmode & 0040 && gid == fgid) ||    // 组读权限 (0040)
+         (fmode & 0004))) {                   // 其他用户读权限 (0004)
         iunlock(f->ip);
         return -1;
       }
@@ -192,9 +192,9 @@ filewrite(struct file *f, uint64 addr, int n)
     // root用户拥有所有权限
     if(uid != 0) {
       // 检查写权限
-      if(!((fmode & 1<<7 && uid == fuid) ||    // 所有者写权限 (0200)
-         (fmode & 1<<4 && gid == fgid) ||    // 组写权限 (0020)
-         (fmode & 1<<1))) {                   // 其他用户写权限 (0002)
+      if(!((fmode & 0200 && uid == fuid) ||    // 所有者写权限 (0200)
+         (fmode & 0020 && gid == fgid) ||    // 组写权限 (0020)
+         (fmode & 0002))) {                   // 其他用户写权限 (0002)
         iunlock(f->ip);
         return -1;
       }
@@ -218,9 +218,9 @@ filewrite(struct file *f, uint64 addr, int n)
       #ifdef riscv
       // 再次检查权限，确保在持有锁期间权限没有被修改
       if(uid != 0) {
-        if(!((f->ip->mode & 1<<7 && uid == f->ip->uid) ||    // 所有者写权限 (0200)
-           (f->ip->mode & 1<<4 && gid == f->ip->gid) ||    // 组写权限 (0020)
-           (f->ip->mode & 1<<1))) {                         // 其他用户写权限 (0002)
+        if(!((f->ip->mode & 0200 && uid == f->ip->uid) ||    // 所有者写权限 (0200)
+           (f->ip->mode & 0020 && gid == f->ip->gid) ||    // 组写权限 (0020)
+           (f->ip->mode & 0002))) {                         // 其他用户写权限 (0002)
           iunlock(f->ip);
           end_op();
           return -1;

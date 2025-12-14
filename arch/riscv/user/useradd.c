@@ -52,6 +52,13 @@ int main(int argc, char *argv[]) {
   
   printf("=== 用户添加程序 ===\n");
   
+  // 检查当前用户是否为root
+  uint current_uid = getuid();
+  if (current_uid != 0) {
+    printf("错误: 只有root用户可以创建新用户\n");
+    exit(1);
+  }
+  
   // 获取用户名
   printf("请输入用户名: ");
   if (get_input(username, sizeof(username)) == 0) {

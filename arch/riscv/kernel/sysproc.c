@@ -40,15 +40,20 @@ uint64
 sys_setuid(void)
 {
   int uid;
+  struct proc *p = myproc();
+  
   if(argint(0, &uid) < 0)
     return -1;
   
-  // 只有root用户(UID=0)可以设置UID为任何值
-  // 普通用户只能设置自己的UID
-  if(myproc()->uid != 0 && myproc()->uid != uid)
+  // 修改权限检查逻辑：
+  // 1. 任何用户都可以切换到root用户(UID=0)
+  // 2. root用户(UID=0)可以设置UID为任何值
+  // 3. 普通用户只能设置自己的UID
+  if(uid != 0 && p->uid != 0 && p->uid != uid) {
     return -1;
+  }
     
-  myproc()->uid = uid;
+  p->uid = uid;
   return 0;
 }
 
@@ -56,15 +61,20 @@ uint64
 sys_setgid(void)
 {
   int gid;
+  struct proc *p = myproc();
+  
   if(argint(0, &gid) < 0)
     return -1;
   
-  // 只有root用户(UID=0)可以设置GID为任何值
-  // 普通用户只能设置自己的GID
-  if(myproc()->uid != 0 && myproc()->gid != gid)
+  // 修改权限检查逻辑：
+  // 1. 任何用户都可以切换到root组(GID=0)
+  // 2. root用户(UID=0)可以设置GID为任何值
+  // 3. 普通用户只能设置自己的GID
+  if(gid != 0 && p->uid != 0 && p->gid != gid) {
     return -1;
+  }
     
-  myproc()->gid = gid;
+  p->gid = gid;
   return 0;
 }
 

@@ -5,7 +5,7 @@
 
 int main(int argc, char *argv[]) {
   unsigned int uid = getuid();
-  printf("调试: whoami - getuid() 返回 %d\n", uid);
+  // printf("调试: whoami - getuid() 返回 %d\n", uid);
   struct passwd *pw = getpwuid(uid);
   
   if (pw != 0) {
