@@ -117,4 +117,8 @@
 // 文件定位相关
 #define SYS_seek       304   // 文件定位
 
+// 文件权限相关
+#define SYS_chown      305   // 修改文件所有权
+#define SYS_chmod      306   // 修改文件权限模式
+
 #endif // _SYS_H

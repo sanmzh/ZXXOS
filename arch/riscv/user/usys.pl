@@ -101,3 +101,7 @@ entry("setgid");
 
 # 文件定位相关系统调用
 entry("seek");
+
+# 文件权限相关系统调用
+entry("chown");
+entry("chmod");

@@ -128,7 +128,29 @@ fileread(struct file *f, uint64 addr, int n)
       return -1;
     r = devsw[f->major].read(1, addr, n);
   } else if(f->type == FD_INODE){
+    // 检查文件读取权限
     ilock(f->ip);
+    #ifdef riscv
+    // 检查当前进程是否有读取权限
+    struct proc *p = myproc();
+    uint uid = p->uid;
+    uint gid = p->gid;
+    uint fmode = f->ip->mode;
+    uint fuid = f->ip->uid;
+    uint fgid = f->ip->gid;
+    
+    // root用户拥有所有权限
+    if(uid != 0) {
+      // 检查读权限
+      if(!((fmode & 1<<8 && uid == fuid) ||    // 所有者读权限 (0400)
+         (fmode & 1<<5 && gid == fgid) ||    // 组读权限 (0040)
+         (fmode & 1<<2))) {                   // 其他用户读权限 (0004)
+        iunlock(f->ip);
+        return -1;
+      }
+    }
+    #endif
+    
     if((r = readi(f->ip, 1, addr, f->off, n)) > 0)
       f->off += r;
     iunlock(f->ip);
@@ -156,8 +178,32 @@ filewrite(struct file *f, uint64 addr, int n)
       return -1;
     ret = devsw[f->major].write(1, addr, n);
   } else if(f->type == FD_INODE){
+    #ifdef riscv
+    // 检查文件写入权限
+    ilock(f->ip);
+    // 检查当前进程是否有写入权限
+    struct proc *p = myproc();
+    uint uid = p->uid;
+    uint gid = p->gid;
+    uint fmode = f->ip->mode;
+    uint fuid = f->ip->uid;
+    uint fgid = f->ip->gid;
+    
+    // root用户拥有所有权限
+    if(uid != 0) {
+      // 检查写权限
+      if(!((fmode & 1<<7 && uid == fuid) ||    // 所有者写权限 (0200)
+         (fmode & 1<<4 && gid == fgid) ||    // 组写权限 (0020)
+         (fmode & 1<<1))) {                   // 其他用户写权限 (0002)
+        iunlock(f->ip);
+        return -1;
+      }
+    }
+    iunlock(f->ip); // 权限检查完成后释放锁
+    #endif
+    
     // write a few blocks at a time to avoid exceeding
-    // the maximum log transaction size, including
+    // maximum log transaction size, including
     // i-node, indirect block, allocation blocks,
     // and 2 blocks of slop for non-aligned writes.
     int max = ((MAXOPBLOCKS-1-1-2) / 2) * BSIZE;
@@ -169,6 +215,19 @@ filewrite(struct file *f, uint64 addr, int n)
 
       begin_op();
       ilock(f->ip);
+      #ifdef riscv
+      // 再次检查权限，确保在持有锁期间权限没有被修改
+      if(uid != 0) {
+        if(!((f->ip->mode & 1<<7 && uid == f->ip->uid) ||    // 所有者写权限 (0200)
+           (f->ip->mode & 1<<4 && gid == f->ip->gid) ||    // 组写权限 (0020)
+           (f->ip->mode & 1<<1))) {                         // 其他用户写权限 (0002)
+          iunlock(f->ip);
+          end_op();
+          return -1;
+        }
+      }
+      #endif
+      
       if ((r = writei(f->ip, 1, addr + i, f->off, n1)) > 0)
         f->off += r;
       iunlock(f->ip);

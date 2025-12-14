@@ -44,7 +44,8 @@ sys_setuid(void)
     return -1;
   
   // 只有root用户(UID=0)可以设置UID为任何值
-  if(myproc()->uid != 0)
+  // 普通用户只能设置自己的UID
+  if(myproc()->uid != 0 && myproc()->uid != uid)
     return -1;
     
   myproc()->uid = uid;
@@ -59,7 +60,8 @@ sys_setgid(void)
     return -1;
   
   // 只有root用户(UID=0)可以设置GID为任何值
-  if(myproc()->uid != 0)
+  // 普通用户只能设置自己的GID
+  if(myproc()->uid != 0 && myproc()->gid != gid)
     return -1;
     
   myproc()->gid = gid;

@@ -1,9 +1,11 @@
 #include "types.h"
 #include "param.h"
 #include "memlayout.h"
+#include "spinlock.h"
 #ifdef riscv
 #define my_exec kexec 
 #include "riscv.h"
+
 #include "sleeplock.h"
 #include "fs.h"
 #include "file.h"
@@ -12,7 +14,6 @@
 #include "loongarch.h"
 #define my_exec exec 
 #endif
-#include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
 #include "elf.h"

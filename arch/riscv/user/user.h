@@ -67,6 +67,9 @@ int setgid(uint);
 // 文件定位相关系统调用
 int seek(int, int, int);
 
+// 文件权限相关系统调用
+int chown(const char*, int, int);
+int chmod(const char*, int);
 
 // ulib.c
 int stat(const char*, struct stat*);

@@ -51,7 +51,58 @@ fdalloc(struct file *f)
   return -1;
 }
 
+#ifdef riscv
 // TODO!!!: create access kernel function(s)
+
+// 检查文件访问权限
+// 返回1表示允许访问，0表示拒绝访问
+int
+accessi(struct inode *ip, int mode)
+{
+  struct proc *p = myproc();
+  uint uid = p->uid;
+  uint gid = p->gid;
+  uint fmode = ip->mode;
+  uint fuid = ip->uid;
+  uint fgid = ip->gid;
+
+  // root用户拥有所有权限
+  if(uid == 0)
+    return 1;
+
+  int can_read = 0;
+  int can_write = 0;
+  int can_exec = 0;
+  
+  // 检查读权限
+  if((fmode & 0400 && uid == fuid) ||    // 所有者读权限 (0400)
+     (fmode & 0040 && gid == fgid) ||    // 组读权限 (0040)
+     (fmode & 0004))                     // 其他用户读权限 (0004)
+    can_read = 1;
+  
+  // 检查写权限
+  if((fmode & 0200 && uid == fuid) ||    // 所有者写权限 (0200)
+     (fmode & 0020 && gid == fgid) ||    // 组写权限 (0020)
+     (fmode & 0002))                     // 其他用户写权限 (0002)
+    can_write = 1;
+  
+  // 检查执行权限
+  if((fmode & 0100 && uid == fuid) ||    // 所有者执行权限 (0100)
+     (fmode & 0010 && gid == fgid) ||    // 组执行权限 (0010)
+     (fmode & 0001))                     // 其他用户执行权限 (0001)
+    can_exec = 1;
+  
+  // 检查请求的权限是否都被满足
+  if((mode & 4) && !can_read)  // R_OK
+    return 0;
+  if((mode & 2) && !can_write) // W_OK
+    return 0;
+  if((mode & 1) && !can_exec)  // X_OK
+    return 0;
+  
+  return 1;
+}
+#endif
 
 uint64
 sys_dup(void)
@@ -78,6 +129,19 @@ sys_read(void)
   argint(2, &n);
   if(argfd(0, 0, &f) < 0)
     return -1;
+    
+  #ifdef riscv
+  // 检查文件读取权限
+  if(f->type == FD_INODE) {
+    ilock(f->ip);
+    if(!accessi(f->ip, 4)) { // R_OK
+      iunlock(f->ip);
+      return -1;
+    }
+    iunlock(f->ip);
+  }
+  #endif
+    
   return fileread(f, p, n);
 }
 
@@ -92,6 +156,18 @@ sys_write(void)
   argint(2, &n);
   if(argfd(0, 0, &f) < 0)
     return -1;
+
+  #ifdef riscv
+  // 检查文件写入权限
+  if(f->type == FD_INODE) {
+    ilock(f->ip);
+    if(!accessi(f->ip, 2)) { // W_OK
+      iunlock(f->ip);
+      return -1;
+    }
+    iunlock(f->ip);
+  }
+  #endif
 
   return filewrite(f, p, n);
 }
@@ -151,7 +227,14 @@ sys_link(void)
   if((dp = nameiparent(new, name)) == 0)
     goto bad;
   ilock(dp);
-
+  
+  #ifdef riscv
+  // 检查目录写权限
+  if(!accessi(dp, 2)) { // W_OK
+    iunlockput(dp);
+    goto bad;
+  }
+  #endif
   // TODO!!!: authorize access for `dp`
   
   if(dp->dev != ip->dev || dirlink(dp, name, ip->inum) < 0){
@@ -209,7 +292,15 @@ sys_unlink(void)
 
   ilock(dp);
   
-  // TODO!!!: authorize access for `dp`
+  #ifdef riscv
+  // 检查目录写权限和执行权限
+  if(!accessi(dp, 2) || !accessi(dp, 1)) { // W_OK | X_OK
+    iunlockput(dp);
+    return 0;
+  }
+  #endif
+
+    // TODO!!!: authorize access for `dp`
 
   // Cannot unlink "." or "..".
   if(namecmp(name, ".") == 0 || namecmp(name, "..") == 0)
@@ -259,6 +350,14 @@ create(char *path, short type, short major, short minor)
     return 0;
 
   ilock(dp);
+  
+  #ifdef riscv
+  // 检查目录写权限和执行权限
+  if(!accessi(dp, 2) || !accessi(dp, 1)) { // W_OK | X_OK
+    iunlockput(dp);
+    return 0;
+  }
+  #endif
 
     // TODO!!!: authorize access for `dp`
 
@@ -280,8 +379,21 @@ create(char *path, short type, short major, short minor)
   ip->major = major;
   ip->minor = minor;
   ip->nlink = 1;
-  // TODO!!!: implement default file creation ownership and mode
   
+  #ifdef riscv
+  // 实现默认文件创建所有权和模式
+  struct proc *p = myproc();
+  ip->uid = p->uid;
+  ip->gid = p->gid;
+  
+  // 设置默认权限模式
+  if(type == T_DIR) {
+    ip->mode = 0755; // 目录默认权限: rwxr-xr-x (0755)
+  } else {
+    ip->mode = 0644; // 文件默认权限: rw-r--r-- (0644)
+  }
+  #endif
+
   iupdate(ip);
 
   if(type == T_DIR){  // Create . and .. entries.
@@ -352,7 +464,6 @@ sys_open(void)
       end_op();
       return -1;
     }
-    // TODO!!!: authorize access for file
   }
 
   if(ip->type == T_DEVICE && (ip->major < 0 || ip->major >= NDEV)){
@@ -361,6 +472,27 @@ sys_open(void)
     return -1;
   }
 
+  #ifdef riscv
+  // 检查文件访问权限
+  int access_mode = 0;
+  if(omode & O_RDONLY || omode & O_RDWR)
+    access_mode |= 4; // R_OK
+  if(omode & O_WRONLY || omode & O_RDWR)
+    access_mode |= 2; // W_OK
+  
+  if(!accessi(ip, access_mode)) {
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+  
+  // 在权限检查通过后，才执行截断操作
+  if((omode & O_TRUNC) && ip->type == T_FILE){
+    itrunc(ip);
+  }
+  
+  // TODO!!!: authorize access for file
+  #endif
   if((f = filealloc()) == 0 || (fd = fdalloc(f)) < 0){
     if(f)
       fileclose(f);
@@ -379,10 +511,6 @@ sys_open(void)
   f->ip = ip;
   f->readable = !(omode & O_WRONLY);
   f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
-
-  if((omode & O_TRUNC) && ip->type == T_FILE){
-    itrunc(ip);
-  }
 
   iunlock(ip);
   end_op();
@@ -444,6 +572,16 @@ sys_chdir(void)
     end_op();
     return -1;
   }
+  
+  #ifdef riscv
+  // 检查目录执行权限
+  if(!accessi(ip, 1)) { // X_OK
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+  #endif
+  
   // TODO!!!: authorize access for file
 
   iunlock(ip);
@@ -464,6 +602,27 @@ sys_exec(void)
   if(argstr(0, path, MAXPATH) < 0) {
     return -1;
   }
+  
+  #ifdef riscv
+  // 检查文件执行权限
+  struct inode *ip;
+  begin_op();
+  if((ip = namei(path)) == 0){
+    end_op();
+    return -1;
+  }
+  ilock(ip);
+  
+  // 检查文件执行权限
+  if(!accessi(ip, 1)) { // X_OK
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+  #endif 
+  
+  iunlockput(ip);
+  end_op();
 
   // TODO!!!: authorize access for file
 
@@ -684,6 +843,92 @@ sys_seek(void)
   return f->off;
 }
 
+
+#ifdef riscv
 // TODO!!!: write a chmod system call
 
+uint64
+sys_chmod(void)
+{
+  char path[MAXPATH];
+  int mode;
+  struct inode *ip;
+  struct proc *p = myproc();
+
+  if(argstr(0, path, MAXPATH) < 0)
+    return -1;
+  if(argint(1, &mode) < 0)
+    return -1;
+
+  begin_op();
+  if((ip = namei(path)) == 0){
+    end_op();
+    return -1;
+  }
+
+  ilock(ip);
+  
+  // 只有文件所有者或root用户才能修改文件权限
+  if(p->uid != 0 && p->uid != ip->uid) {
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+
+  // 设置新的权限模式
+  ip->mode = mode;
+  iupdate(ip);
+  
+  iunlockput(ip);
+  end_op();
+
+  return 0;
+}
+
+uint64
+sys_chown(void)
+{
+  char path[MAXPATH];
+  int uid, gid;
+  struct inode *ip;
+  struct proc *p = myproc();
+
+  if(argstr(0, path, MAXPATH) < 0)
+    return -1;
+  if(argint(1, &uid) < 0)
+    return -1;
+  if(argint(2, &gid) < 0)
+    return -1;
+
+  begin_op();
+  if((ip = namei(path)) == 0){
+    end_op();
+    return -1;
+  }
+
+  ilock(ip);
+  
+  // 只有文件所有者或root用户才能修改文件所有权
+  if(p->uid != 0 && p->uid != ip->uid) {
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+
+  // 设置新的UID
+  ip->uid = uid;
+  
+  // 只有当gid不为-1时才设置GID
+  if(gid != -1) {
+    ip->gid = gid;
+  }
+  
+  iupdate(ip);
+  
+  iunlockput(ip);
+  end_op();
+
+  return 0;
+}
+#endif
 // TODO!!!: write a chown system call

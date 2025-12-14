@@ -295,13 +295,13 @@ UPROGS=\
 	$U/_mkdir\
 	$U/_rm\
 	$U/_sh\
-	$U/_stressfs\
+#	$U/_stressfs\
 	$U/_trace\
 	$U/_sysinfotest\
 	$U/_usertests\
 	$U/_semtest\
 	$U/_cowtest\
-#	$U/_grind\
+	$U/_grind\
         $U/_wc\
 	$U/_zombie\
 	
@@ -313,6 +313,9 @@ UPROGS += $U/_grind\
 	$U/_useradd\
 	$U/_pwdtests\
 	$U/_whoami\
+	$U/_chown\
+	$U/_chmod\
+	$U/_perms_test\
 #	$U/_rrtest\
 	$U/_prioritytest\
 	$U/_test_proc_mlfq\

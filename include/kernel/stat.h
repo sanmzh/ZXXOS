@@ -8,4 +8,9 @@ struct stat {
   short type;  // Type of file
   short nlink; // Number of links to file
   uint64 size; // Size of file in bytes
+  #ifdef riscv
+  uint mode;   // File permission mode
+  uint uid;    // User ID
+  uint gid;    // Group ID
+  #endif
 };

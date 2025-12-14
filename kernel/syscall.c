@@ -184,6 +184,10 @@ extern uint64 sys_setgid(void);
 // 文件定位相关系统调用
 extern uint64 sys_seek(void);
 
+// 文件权限相关系统调用
+extern uint64 sys_chown(void);
+extern uint64 sys_chmod(void);
+
 #endif
 
 #ifdef loongarch
@@ -280,6 +284,10 @@ static uint64 (*syscalls[])(void) = {
 
 // 文件定位相关系统调用
 [SYS_seek]    sys_seek,
+
+// 文件权限相关系统调用
+[SYS_chown]   sys_chown,
+[SYS_chmod]   sys_chmod,
 
 
 
