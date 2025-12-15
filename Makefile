@@ -42,6 +42,7 @@ OBJS = \
   $K/sysproc.o\
   $K/sysfile.o\
   $K/ipc/systemV/sem.o \
+  $K/rtc.o \
   $K/ipc/systemV/syssem.o
 
 
@@ -51,7 +52,6 @@ OBJS += \
   $K/start.o \
   $K/trampoline.o \
   $K/plic.o \
-  $K/rtc.o \
   $K/time.o \
   $K/virtio_disk.o \
   $K/syssocket.o \
@@ -295,19 +295,18 @@ UPROGS=\
 	$U/_mkdir\
 	$U/_rm\
 	$U/_sh\
-#	$U/_stressfs\
 	$U/_trace\
 	$U/_sysinfotest\
 	$U/_usertests\
 	$U/_semtest\
 	$U/_cowtest\
-	$U/_grind\
+#	$U/_stressfs\
         $U/_wc\
 	$U/_zombie\
 	
 ifeq ($(ARCH),riscv)
-UPROGS += $U/_grind\
-    $U/_wc\
+UPROGS += $U/_wc\
+	$U/_grind\
 	$U/_zombie\
 	$U/_login\
 	$U/_useradd\

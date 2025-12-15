@@ -29,6 +29,10 @@
 #define RAMBASE (0x90000000UL | DMWIN_MASK)
 #define RAMSTOP (RAMBASE + 128*1024*1024)
 
+// 龙芯DMW窗口映射改写：
+#define RTC_PHYS   0x100d0100UL
+#define RTC        (RTC_PHYS | DMWIN_MASK)  // ← 关键修改
+
 // map kernel stacks beneath the trampframe,
 // each surrounded by invalid guard pages.
 #define KSTACK(p) (TRAPFRAME - ((p)+1)* 2*PGSIZE)
