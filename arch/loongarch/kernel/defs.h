@@ -87,6 +87,12 @@ int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
 void            proccount(uint64* count);
 
+//rtc.c
+void            rtc_init();
+uint64          rtcread();
+
+
+
 // swtch.S
 void            swtch(struct context*, struct context*);
 

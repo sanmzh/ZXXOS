@@ -43,6 +43,7 @@ OBJS = \
   $K/sysfile.o\
   $K/ipc/systemV/sem.o \
   $K/rtc.o \
+  $K/time.o \
   $K/ipc/systemV/syssem.o
 
 
@@ -52,7 +53,6 @@ OBJS += \
   $K/start.o \
   $K/trampoline.o \
   $K/plic.o \
-  $K/time.o \
   $K/virtio_disk.o \
   $K/syssocket.o \
   $N/util.o \

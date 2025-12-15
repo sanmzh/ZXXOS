@@ -1,10 +1,5 @@
 #include "types.h"
-#ifdef riscv
 #include "riscv.h"
-#endif
-#ifdef loongarch
-#include "loongarch.h"
-#endif
 #include "memlayout.h"
 #include "defs.h"
 

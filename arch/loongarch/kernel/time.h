@@ -1,6 +1,5 @@
 #ifndef TM_H
 #define TM_H
-
 struct timeval {
   long tv_sec;
   long tv_usec;
@@ -17,4 +16,7 @@ struct tm {
   int tm_yday;  // 0-365
   int tm_isdst; // zero
 };
+
+//time.c
+int             localtime_r(uint64_t raw_data, struct tm *tm);
 #endif

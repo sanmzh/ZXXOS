@@ -1,6 +1,3 @@
-#ifndef TM_H
-#define TM_H
-
 struct timeval {
   long tv_sec;
   long tv_usec;
@@ -17,4 +14,3 @@ struct tm {
   int tm_yday;  // 0-365
   int tm_isdst; // zero
 };
-#endif
