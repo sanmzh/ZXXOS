@@ -41,7 +41,7 @@ int rtc_print_date(void)
            rtc_time.tm_sec);
     
     // 12小时制时间
-    int hour12 = rtc_time.tm_hour % 12;
+    int hour12 = (rtc_time.tm_hour+8) % 12;
     if (hour12 == 0) hour12 = 12;
     printf("  12小时制: %02d:%02d:%02d %s\n",
            hour12,

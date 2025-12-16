@@ -68,11 +68,11 @@ calculate_yearday(int year, int month, int day)
     return yearday - 1;  // tm_yday是0-365
 }
 
-int
+struct tm *
 localtime_r(uint64_t raw_data, struct tm *tm)
 {
     if (tm == NULL) {
-        return -1;
+        return NULL;
     }
     
     // 分离高32位和低32位
@@ -99,5 +99,5 @@ localtime_r(uint64_t raw_data, struct tm *tm)
     tm->tm_yday  = calculate_yearday(year, month, day);
     tm->tm_isdst = 0;  // RTC不存储夏令时信息
     
-    return 0;
+    return tm;
 }

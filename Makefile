@@ -44,6 +44,8 @@ OBJS = \
   $K/ipc/systemV/sem.o \
   $K/rtc.o \
   $K/time.o \
+  $P/std.o \
+  $N/util.o \
   $K/ipc/systemV/syssem.o
 
 
@@ -55,7 +57,6 @@ OBJS += \
   $K/plic.o \
   $K/virtio_disk.o \
   $K/syssocket.o \
-  $N/util.o \
   $N/net.o \
   $N/ether.o \
   $N/ip.o \
@@ -65,7 +66,6 @@ OBJS += \
   $N/tcp.o \
   $N/socket.o \
   $P/virtio_net.o \
-  $P/std.o \
   $K/e1000.o \
   $K/E1000_net.o \
   $K/pci.o \
@@ -140,8 +140,6 @@ CFLAGS += -fno-builtin-strchr -fno-builtin-exit -fno-builtin-malloc -fno-builtin
 CFLAGS += -fno-builtin-free -fno-builtin-strnlen -fno-builtin-snprintf -fno-builtin-vsnprintf
 CFLAGS += -fno-builtin-memcpy -Wno-main
 CFLAGS += -fno-builtin-printf -fno-builtin-fprintf -fno-builtin-vprintf
-CFLAGS += -I. -I $(AR)/$A -I $(AR)/$A/$K -I$I -I$K -I$I/$U
-+CFLAGS += -I $N -I $P
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 CFLAGS += -Driscv
 CFLAGS += -DNET_TESTS_PORT=$(SERVERPORT)		# LAB_NET
@@ -166,13 +164,15 @@ CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb
 CFLAGS += -MD
 CFLAGS += -march=loongarch64 -mabi=lp64s
 CFLAGS += -ffreestanding -fno-common -nostdlib
-CFLAGS += -I. -I $(AR)/$A/$K -I$I -I$K -I $(AR)/$A -fno-stack-protector
+CFLAGS +=  -fno-stack-protector
 CFLAGS += -fno-pie -no-pie
 CFLAGS += -Dloongarch
 
 endif
 
-CFLAGS += -I$I/$K -I$(AR)
+CFLAGS += -I$I/$K -I$(AR) -I. -I $(AR)/$A/$K -I$I -I$K -I $(AR)/$A
+CFLAGS += -I$I/$U
+CFLAGS += -I $(AR)/$A/$K/$N -I $P
 LDFLAGS = -z max-page-size=4096
 
 KERNEL_DEPS = $(OBJS)  $(AR)/$A/$K/kernel.ld
@@ -203,15 +203,29 @@ $K/%.o:  $(AR)/$A/$K/%.c
 $K/%.o: $K/%.c
 	$(CC) $(CFLAGS) -g -c -o $@ $<
 
-# 将 arch/riscv/kernel/net 目录下的源文件编译到 kernel/net 目录
-kernel/net/%.o: arch/riscv/kernel/net/%.c
-	mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c -o $@ $<
 
+
+ifeq ($(ARCH),riscv)
 # 将 arch/riscv/kernel/net/platform/xv6-riscv 目录下的源文件编译到 kernel/net/platform/xv6-riscv 目录
 kernel/net/platform/xv6-riscv/%.o: arch/riscv/kernel/net/platform/xv6-riscv/%.c
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c -o $@ $<
+# 将 arch/riscv/kernel/net 目录下的源文件编译到 kernel/net 目录
+kernel/net/%.o: arch/riscv/kernel/net/%.c
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c -o $@ $<
+endif
+
+ifeq ($(ARCH),loongarch)
+# 将 arch/riscv/kernel/net 目录下的源文件编译到 kernel/net 目录
+kernel/net/%.o: arch/$A/$K/net/%.c
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c -o $@ $<
+# 将 arch/riscv/kernel/net/platform/xv6-riscv 目录下的源文件编译到 kernel/net/platform/xv6-riscv 目录
+kernel/net/platform/xv6-riscv/%.o: arch/loongarch/kernel/net/platform/$A/%.c
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c -o $@ $<
+endif
 
 
 ifeq ($(ARCH),riscv)
@@ -295,12 +309,12 @@ UPROGS=\
 	$U/_mkdir\
 	$U/_rm\
 	$U/_sh\
+#	$U/_stressfs\
 	$U/_trace\
 	$U/_sysinfotest\
 	$U/_usertests\
 	$U/_semtest\
 	$U/_cowtest\
-#	$U/_stressfs\
         $U/_wc\
 	$U/_zombie\
 	

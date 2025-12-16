@@ -91,7 +91,7 @@ void            proccount(uint64* count);
 void            rtc_init();
 uint64          rtcread();
 
-
+#include "time.h"
 
 // swtch.S
 void            swtch(struct context*, struct context*);

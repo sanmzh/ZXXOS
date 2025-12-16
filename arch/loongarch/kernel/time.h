@@ -18,5 +18,5 @@ struct tm {
 };
 
 //time.c
-int             localtime_r(uint64_t raw_data, struct tm *tm);
+struct tm*             localtime_r(uint64_t raw_data, struct tm *tm);
 #endif
