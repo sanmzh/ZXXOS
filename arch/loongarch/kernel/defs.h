@@ -133,6 +133,10 @@ void            apic_complete(uint64 irq);
 void            ramdiskinit(void);
 void            ramdiskrw(struct buf*, int write);
 
+// net/net.c
+void            netinit(void);
+void            netrun(void);
+
 // bio.c
 void            binit(void);
 struct buf*     bread(uint, uint);
