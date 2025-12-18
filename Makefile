@@ -47,6 +47,7 @@ OBJS = \
   $P/std.o \
   $N/util.o \
   $N/net.o \
+  $N/ether.o \
   $K/ipc/systemV/syssem.o
 
 
@@ -58,7 +59,6 @@ OBJS += \
   $K/plic.o \
   $K/virtio_disk.o \
   $K/syssocket.o \
-  $N/ether.o \
   $N/ip.o \
   $N/arp.o \
   $N/icmp.o \
